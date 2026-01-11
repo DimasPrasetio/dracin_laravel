@@ -1,0 +1,258 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+@source '../**/*.blade.php';
+@source '../**/*.js';
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+}
+
+@layer base {
+    * {
+        @apply antialiased;
+    }
+
+    body {
+        @apply min-h-screen;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background-attachment: fixed;
+    }
+}
+
+@layer components {
+    .glass-effect {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+    }
+
+    .card-shadow {
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+
+    .card-shadow-lg {
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+
+    .sidebar-scroll::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb {
+        background: rgba(99, 102, 241, 0.3);
+        border-radius: 3px;
+    }
+
+    .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+        background: rgba(99, 102, 241, 0.5);
+    }
+
+    #sidebar {
+        transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    #sidebar.minimized {
+        width: 5rem !important;
+    }
+
+    #sidebar.minimized .sidebar-text {
+        opacity: 0 !important;
+        width: 0 !important;
+        overflow: hidden !important;
+        display: none !important;
+    }
+
+    #sidebar.minimized .sidebar-icon {
+        display: flex !important;
+        justify-content: center !important;
+        align-items: center !important;
+    }
+
+    #sidebar.minimized .sidebar-full {
+        display: none !important;
+    }
+
+    #sidebar.minimized .sidebar-header {
+        justify-content: center !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    #sidebar.minimized .sidebar-footer {
+        justify-content: center !important;
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }
+
+    #sidebar.minimized .nav-item {
+        justify-content: center !important;
+        padding-left: 0.75rem !important;
+        padding-right: 0.75rem !important;
+    }
+
+    #sidebar.minimized .nav-item .icon-wrapper {
+        margin-right: 0 !important;
+        margin-left: 0 !important;
+    }
+
+    #sidebar.minimized .section-title {
+        display: flex !important;
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+
+    #sidebar.minimized .section-title-text {
+        display: none !important;
+    }
+
+    #sidebar.minimized .section-title-icon {
+        display: block !important;
+    }
+
+    .sidebar-text {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .sidebar-icon {
+        display: none;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sidebar-full {
+        display: flex;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .section-title-icon {
+        display: none;
+        width: 0.5rem;
+        height: 0.5rem;
+        background: linear-gradient(135deg, #3b82f6, #6366f1);
+        border-radius: 50%;
+    }
+
+    .nav-item {
+        position: relative;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .nav-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 4px;
+        height: 0;
+        background: linear-gradient(180deg, #3b82f6, #2563eb);
+        border-radius: 0 4px 4px 0;
+        transition: height 0.3s ease;
+    }
+
+    .nav-item.active::before,
+    .nav-item:hover::before {
+        height: 70%;
+    }
+
+    #sidebar.minimized .nav-item::before {
+        display: none;
+    }
+
+    #sidebar.minimized .nav-item.active,
+    #sidebar.minimized .nav-item:hover {
+        background: rgba(59, 130, 246, 0.1);
+    }
+}
+
+@layer utilities {
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+.swal2-popup {
+    border-radius: 1rem !important;
+    padding: 2rem !important;
+}
+
+.swal2-title {
+    font-weight: 700 !important;
+    font-size: 1.5rem !important;
+    color: #1f2937 !important;
+}
+
+.swal2-html-container {
+    color: #6b7280 !important;
+    font-size: 0.95rem !important;
+}
+
+.swal2-confirm {
+    background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%) !important;
+    border-radius: 0.75rem !important;
+    padding: 0.625rem 1.5rem !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3) !important;
+}
+
+.swal2-confirm:hover {
+    transform: translateY(-1px) !important;
+    box-shadow: 0 6px 12px -2px rgba(59, 130, 246, 0.4) !important;
+}
+
+.swal2-cancel {
+    background: #f3f4f6 !important;
+    color: #374151 !important;
+    border-radius: 0.75rem !important;
+    padding: 0.625rem 1.5rem !important;
+    font-weight: 600 !important;
+}
+
+.swal2-cancel:hover {
+    background: #e5e7eb !important;
+}
+
+.swal2-icon.swal2-success {
+    border-color: #10b981 !important;
+    color: #10b981 !important;
+}
+
+.swal2-icon.swal2-error {
+    border-color: #ef4444 !important;
+    color: #ef4444 !important;
+}
+
+.swal2-icon.swal2-warning {
+    border-color: #f59e0b !important;
+    color: #f59e0b !important;
+}
+
+.swal2-icon.swal2-info {
+    border-color: #3b82f6 !important;
+    color: #3b82f6 !important;
+}
+
+.swal2-icon.swal2-question {
+    border-color: #8b5cf6 !important;
+    color: #8b5cf6 !important;
+}
