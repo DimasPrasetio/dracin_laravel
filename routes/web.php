@@ -17,6 +17,11 @@ Route::get('/payment/{reference}', [CheckoutController::class, 'showPayment'])->
 Route::get('/payment/{reference}/status', [CheckoutController::class, 'checkStatus'])->name('payment.status');
 Route::post('/payment/health-check', [CheckoutController::class, 'retryHealthCheck'])->name('payment.health-check');
 
+// Tripay Payment Callback
+Route::post('/payment/callback', [CheckoutController::class, 'callback'])
+    ->middleware(\App\Http\Middleware\VerifyTripayCallback::class)
+    ->name('payment.callback');
+
 // Static Pages
 Route::get('/privacy', function () {
     return view('frontend.privacy');
@@ -33,11 +38,6 @@ Route::get('/about', function () {
 Route::get('/contact', function () {
     return view('frontend.contact');
 })->name('contact');
-
-// Tripay Callback - Protected by middleware
-Route::post('/payment/callback', [CheckoutController::class, 'callback'])
-    ->middleware(\App\Http\Middleware\VerifyTripayCallback::class)
-    ->name('payment.callback');
 
 // Authentication Routes
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');

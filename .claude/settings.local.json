@@ -10,7 +10,9 @@
       "Bash(php test_telegram.php:*)",
       "Bash(php test_file_upload.php:*)",
       "Bash(ls:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(curl:*)",
+      "Bash(php:*)"
     ]
   }
 }
