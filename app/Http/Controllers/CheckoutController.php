@@ -276,6 +276,23 @@ class CheckoutController extends Controller
     public function callback(TripayCallbackRequest $request)
     {
         try {
+            // Check if this is a test callback from Tripay dashboard
+            $isTestCallback = $this->isTestCallback($request);
+
+            if ($isTestCallback) {
+                Log::info('Tripay test callback processed successfully', [
+                    'note' => $request->input('note'),
+                    'status' => $request->input('status'),
+                    'payment_method' => $request->input('payment_method'),
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Test callback received successfully'
+                ]);
+            }
+
+            // Process real callback
             $callbackData = TripayCallbackData::fromRequest($request->validated());
 
             $this->tripayService->handleCallback($callbackData);
@@ -304,6 +321,22 @@ class CheckoutController extends Controller
                 'message' => 'Internal server error'
             ], 500);
         }
+    }
+
+    /**
+     * Check if this is a test callback from Tripay dashboard
+     */
+    private function isTestCallback($request): bool
+    {
+        $reference = $request->input('reference');
+        $merchantRef = $request->input('merchant_ref');
+        $note = $request->input('note', '');
+
+        return (
+            is_null($reference) &&
+            is_null($merchantRef) &&
+            (str_contains($note, 'Test') || str_contains($note, 'test'))
+        );
     }
 
     /**
