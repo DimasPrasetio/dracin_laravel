@@ -225,9 +225,23 @@
                                         <div class="ml-4 flex-1">
                                             <div class="font-medium">{{ $channel['name'] }}</div>
                                             @if(isset($channel['fee_customer']))
-                                                <div class="text-sm text-secondary">
-                                                    Biaya: {{ $channel['fee_customer']['type'] == 'flat' ? 'Rp ' . number_format($channel['fee_customer']['amount'], 0, ',', '.') : $channel['fee_customer']['amount'] . '%' }}
-                                                </div>
+                                                @php
+                                                    $flat = $channel['fee_customer']['flat'] ?? 0;
+                                                    $percent = $channel['fee_customer']['percent'] ?? 0;
+                                                    $hasFee = $flat > 0 || $percent > 0;
+                                                @endphp
+                                                @if($hasFee)
+                                                    <div class="text-sm text-secondary">
+                                                        Biaya:
+                                                        @if($flat > 0 && $percent > 0)
+                                                            Rp {{ number_format($flat, 0, ',', '.') }} + {{ $percent }}%
+                                                        @elseif($flat > 0)
+                                                            Rp {{ number_format($flat, 0, ',', '.') }}
+                                                        @else
+                                                            {{ $percent }}%
+                                                        @endif
+                                                    </div>
+                                                @endif
                                             @endif
                                         </div>
                                     </label>

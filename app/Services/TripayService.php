@@ -279,6 +279,16 @@ class TripayService
                     'timestamp' => now(),
                 ]);
 
+                // Check if it's an IP whitelist issue
+                $errorMessage = $e->getMessage();
+                if (str_contains($errorMessage, 'Unauthorized IP') || str_contains($errorMessage, 'Whitelist IP')) {
+                    return [
+                        'available' => false,
+                        'reason' => 'ip_not_whitelisted',
+                        'description' => 'Konfigurasi IP Whitelist diperlukan. Silakan hubungi administrator untuk menambahkan IP server ke Tripay dashboard.',
+                    ];
+                }
+
                 return [
                     'available' => false,
                     'reason' => 'api_error',
