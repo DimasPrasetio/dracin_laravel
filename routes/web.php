@@ -16,6 +16,23 @@ Route::post('/checkout/process', [CheckoutController::class, 'processCheckout'])
 Route::get('/payment/{reference}', [CheckoutController::class, 'showPayment'])->name('payment.show');
 Route::get('/payment/{reference}/status', [CheckoutController::class, 'checkStatus'])->name('payment.status');
 
+// Static Pages
+Route::get('/privacy', function () {
+    return view('frontend.privacy');
+})->name('privacy');
+
+Route::get('/terms', function () {
+    return view('frontend.terms');
+})->name('terms');
+
+Route::get('/about', function () {
+    return view('frontend.about');
+})->name('about');
+
+Route::get('/contact', function () {
+    return view('frontend.contact');
+})->name('contact');
+
 // Tripay Callback - Protected by middleware
 Route::post('/payment/callback', [CheckoutController::class, 'callback'])
     ->middleware(\App\Http\Middleware\VerifyTripayCallback::class)

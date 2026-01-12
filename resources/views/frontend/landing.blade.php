@@ -60,9 +60,153 @@
         .glow-effect {
             box-shadow: 0 0 30px rgba(255, 179, 71, 0.2);
         }
+
+        /* Navbar Styles */
+        .navbar {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(10px);
+            background-color: rgba(20, 20, 20, 0.95);
+            border-bottom: 1px solid #2B2B2B;
+        }
+
+        .nav-link {
+            position: relative;
+            transition: color 0.3s ease;
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #E84C1E, #FFB347);
+            transition: width 0.3s ease;
+        }
+
+        .nav-link:hover::after,
+        .nav-link.active::after {
+            width: 100%;
+        }
+
+        .mobile-menu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .mobile-menu.active {
+            max-height: 500px;
+        }
+
+        @media (max-width: 768px) {
+            .nav-link::after {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
+
+    <!-- Navbar -->
+    <nav class="navbar py-4 px-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex items-center justify-between">
+                <!-- Logo/Brand -->
+                <a href="{{ route('landing') }}" class="text-2xl font-bold">
+                    <span class="text-accent">Dracin</span> <span class="text-white">HD</span>
+                </a>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="{{ route('landing') }}" class="nav-link text-white hover:text-accent">Beranda</a>
+                    <a href="#pricing" onclick="event.preventDefault(); document.querySelector('[style*=background-color]').scrollIntoView({behavior: 'smooth', block: 'start'});" class="nav-link text-secondary hover:text-accent">Paket VIP</a>
+                    <a href="{{ route('about') }}" class="nav-link text-secondary hover:text-accent">Tentang Kami</a>
+                    <a href="{{ route('contact') }}" class="nav-link text-secondary hover:text-accent">Kontak</a>
+                    <a href="https://t.me/dracin_hd" target="_blank" class="flex items-center gap-2 btn-primary py-2 px-6 rounded-lg text-white font-semibold">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.987 7.756l-1.875 8.82c-.14.644-.51.803-1.034.5l-2.864-2.11-1.38 1.328c-.153.153-.28.28-.576.28l.204-2.91 5.324-4.808c.232-.204-.05-.32-.358-.115l-6.58 4.142-2.835-.885c-.616-.192-.628-.616.128-.912L16.4 7.057c.513-.192.96.115.587.699z"/>
+                        </svg>
+                        Join Channel
+                    </a>
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button onclick="toggleMobileMenu()" class="md:hidden text-white focus:outline-none">
+                    <svg id="menu-icon" class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+                    </svg>
+                    <svg id="close-icon" class="w-6 h-6 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="mobile-menu md:hidden">
+                <div class="pt-4 pb-2 space-y-3">
+                    <a href="{{ route('landing') }}" class="block py-2 text-white hover:text-accent transition-colors">Beranda</a>
+                    <a href="#pricing" onclick="event.preventDefault(); toggleMobileMenu(); document.querySelector('[style*=background-color]').scrollIntoView({behavior: 'smooth', block: 'start'});" class="block py-2 text-secondary hover:text-accent transition-colors">Paket VIP</a>
+                    <a href="{{ route('about') }}" class="block py-2 text-secondary hover:text-accent transition-colors">Tentang Kami</a>
+                    <a href="{{ route('contact') }}" class="block py-2 text-secondary hover:text-accent transition-colors">Kontak</a>
+                    <a href="https://t.me/dracin_hd" target="_blank" class="flex items-center justify-center gap-2 btn-primary py-3 px-6 rounded-lg text-white font-semibold mt-4">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.987 7.756l-1.875 8.82c-.14.644-.51.803-1.034.5l-2.864-2.11-1.38 1.328c-.153.153-.28.28-.576.28l.204-2.91 5.324-4.808c.232-.204-.05-.32-.358-.115l-6.58 4.142-2.835-.885c-.616-.192-.628-.616.128-.912L16.4 7.057c.513-.192.96.115.587.699z"/>
+                        </svg>
+                        Join Channel
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            const menuIcon = document.getElementById('menu-icon');
+            const closeIcon = document.getElementById('close-icon');
+
+            menu.classList.toggle('active');
+            menuIcon.classList.toggle('hidden');
+            closeIcon.classList.toggle('hidden');
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const nav = document.querySelector('.navbar');
+            const menu = document.getElementById('mobile-menu');
+
+            if (!nav.contains(event.target) && menu.classList.contains('active')) {
+                toggleMobileMenu();
+            }
+        });
+
+        // Highlight active nav link based on scroll position
+        window.addEventListener('scroll', function() {
+            const sections = document.querySelectorAll('section');
+            const navLinks = document.querySelectorAll('.nav-link');
+
+            let current = '';
+
+            sections.forEach(section => {
+                const sectionTop = section.offsetTop;
+                const sectionHeight = section.clientHeight;
+                if (pageYOffset >= (sectionTop - 200)) {
+                    current = section.getAttribute('id');
+                }
+            });
+
+            navLinks.forEach(link => {
+                link.classList.remove('active');
+                if (link.getAttribute('href') === '#' + current) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
 
     <!-- Hero Section -->
     <section class="relative py-20 px-4" style="background-color: #0B0B0B;">
@@ -103,7 +247,7 @@
     </section>
 
     <!-- Pricing Section -->
-    <section class="py-20 px-4" style="background-color: #141414;">
+    <section id="pricing" class="py-20 px-4" style="background-color: #141414;">
         <div class="max-w-6xl mx-auto">
             <div class="text-center mb-12">
                 <h2 class="text-4xl font-bold mb-4">Pilih Paket VIP Anda</h2>
@@ -503,11 +647,76 @@
     </section>
 
     <!-- Footer -->
-    <footer class="py-12 px-4" style="background-color: #141414; border-top: 1px solid #2B2B2B;">
-        <div class="max-w-6xl mx-auto text-center">
-            <h3 class="text-2xl font-bold mb-4"><span class="text-accent">Dracin</span> HD</h3>
-            <p class="text-lg text-secondary mb-6">Platform streaming film drama china terpercaya</p>
-            <p class="text-sm text-secondary">&copy; {{ date('Y') }} Dracin HD. All rights reserved.</p>
+    <footer class="py-16 px-4" style="background-color: #141414; border-top: 1px solid #2B2B2B;">
+        <div class="max-w-6xl mx-auto">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
+                <!-- Brand Section -->
+                <div>
+                    <h3 class="text-2xl font-bold mb-4"><span class="text-accent">Dracin</span> HD</h3>
+                    <p class="text-secondary mb-4">Platform streaming film drama china berkualitas HD dengan subtitle Indonesia.</p>
+                    <div class="flex gap-4">
+                        <a href="https://t.me/dracin_hd" target="_blank" class="text-accent hover:text-orange-400 transition-colors">
+                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.987 7.756l-1.875 8.82c-.14.644-.51.803-1.034.5l-2.864-2.11-1.38 1.328c-.153.153-.28.28-.576.28l.204-2.91 5.324-4.808c.232-.204-.05-.32-.358-.115l-6.58 4.142-2.835-.885c-.616-.192-.628-.616.128-.912L16.4 7.057c.513-.192.96.115.587.699z"/>
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div>
+                    <h4 class="font-semibold text-lg mb-4">Menu Cepat</h4>
+                    <ul class="space-y-2">
+                        <li><a href="{{ route('landing') }}" class="text-secondary hover:text-accent transition-colors">Beranda</a></li>
+                        <li><a href="{{ route('landing') }}#pricing" class="text-secondary hover:text-accent transition-colors">Paket VIP</a></li>
+                        <li><a href="https://t.me/dracin_hd" target="_blank" class="text-secondary hover:text-accent transition-colors">Channel Telegram</a></li>
+                    </ul>
+                </div>
+
+                <!-- Legal -->
+                <div>
+                    <h4 class="font-semibold text-lg mb-4">Informasi</h4>
+                    <ul class="space-y-2">
+                        <li><a href="{{ route('about') }}" class="text-secondary hover:text-accent transition-colors">Tentang Kami</a></li>
+                        <li><a href="{{ route('privacy') }}" class="text-secondary hover:text-accent transition-colors">Kebijakan Privasi</a></li>
+                        <li><a href="{{ route('terms') }}" class="text-secondary hover:text-accent transition-colors">Ketentuan Layanan</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact -->
+                <div>
+                    <h4 class="font-semibold text-lg mb-4">Kontak & Support</h4>
+                    <ul class="space-y-3 text-secondary">
+                        <li class="flex items-start gap-2">
+                            <svg class="w-5 h-5 text-accent mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/>
+                                <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/>
+                            </svg>
+                            <a href="mailto:amandayora1@gmail.com" class="hover:text-accent transition-colors break-all">amandayora1@gmail.com</a>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-5 h-5 text-accent mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm4.987 7.756l-1.875 8.82c-.14.644-.51.803-1.034.5l-2.864-2.11-1.38 1.328c-.153.153-.28.28-.576.28l.204-2.91 5.324-4.808c.232-.204-.05-.32-.358-.115l-6.58 4.142-2.835-.885c-.616-.192-.628-.616.128-.912L16.4 7.057c.513-.192.96.115.587.699z"/>
+                            </svg>
+                            <a href="https://t.me/maharu01" target="_blank" class="hover:text-accent transition-colors">@maharu01</a>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <svg class="w-5 h-5 text-accent mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="text-sm">GLand Ciwastra Park, Jl. Cendana V no 3, Bojongsoang, Kab. Bandung</span>
+                        </li>
+                    </ul>
+                    <a href="{{ route('contact') }}" class="inline-block mt-4 text-accent hover:text-orange-400 transition-colors font-semibold">
+                        Hubungi Kami →
+                    </a>
+                </div>
+            </div>
+
+            <!-- Bottom Footer -->
+            <div class="border-t border-divider pt-8 text-center">
+                <p class="text-sm text-secondary">&copy; {{ date('Y') }} Dracin HD. All rights reserved.</p>
+            </div>
         </div>
     </footer>
 
