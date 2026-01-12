@@ -15,6 +15,7 @@ Route::get('/checkout', [CheckoutController::class, 'checkout'])->name('checkout
 Route::post('/checkout/process', [CheckoutController::class, 'processCheckout'])->name('checkout.process');
 Route::get('/payment/{reference}', [CheckoutController::class, 'showPayment'])->name('payment.show');
 Route::get('/payment/{reference}/status', [CheckoutController::class, 'checkStatus'])->name('payment.status');
+Route::post('/payment/health-check', [CheckoutController::class, 'retryHealthCheck'])->name('payment.health-check');
 
 // Static Pages
 Route::get('/privacy', function () {

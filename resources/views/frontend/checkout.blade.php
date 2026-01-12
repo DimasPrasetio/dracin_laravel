@@ -178,14 +178,37 @@
                             </label>
 
                             @if(isset($paymentStatus) && !$paymentStatus['available'])
-                                <div class="bg-yellow-900/30 border border-yellow-500/50 text-yellow-300 px-4 py-3 rounded-lg mb-4">
-                                    <p class="font-medium">Pembayaran sementara tidak tersedia</p>
-                                    <p class="text-sm mt-1">{{ $paymentStatus['description'] }}</p>
+                                <div id="payment-unavailable-alert" class="bg-yellow-900/30 border border-yellow-500/50 text-yellow-300 px-4 py-3 rounded-lg mb-4">
+                                    <div class="flex items-start">
+                                        <svg class="w-6 h-6 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+                                        </svg>
+                                        <div class="flex-1">
+                                            <h3 class="font-semibold text-yellow-400">Pembayaran Sementara Tidak Tersedia</h3>
+                                            <p class="text-sm mt-1" id="payment-error-description">{{ $paymentStatus['description'] }}</p>
+                                            <button type="button"
+                                                    onclick="retryPaymentCheck()"
+                                                    id="retry-payment-btn"
+                                                    class="mt-3 px-4 py-2 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-400 transition font-semibold flex items-center">
+                                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                                </svg>
+                                                <span id="retry-btn-text">Coba Lagi</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             @elseif(empty($channels))
                                 <div class="bg-yellow-900/30 border border-yellow-500/50 text-yellow-300 px-4 py-3 rounded-lg mb-4">
-                                    <p class="font-medium">Tripay belum dikonfigurasi</p>
-                                    <p class="text-sm mt-1">Silakan atur Tripay terlebih dahulu.</p>
+                                    <div class="flex items-start">
+                                        <svg class="w-6 h-6 text-yellow-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"/>
+                                        </svg>
+                                        <div>
+                                            <p class="font-medium">Tripay Belum Dikonfigurasi</p>
+                                            <p class="text-sm mt-1">Silakan hubungi administrator untuk mengatur Tripay.</p>
+                                        </div>
+                                    </div>
                                 </div>
                             @endif
 
@@ -344,40 +367,142 @@
     </footer>
 
     @if(isset($paymentStatus) && !$paymentStatus['available'])
+        <!-- Modal for Payment Unavailable -->
         <div id="tripay-modal" class="hidden fixed inset-0 z-50 items-center justify-center bg-black/70 px-4">
             <div class="card-dark rounded-lg p-6 max-w-md w-full">
-                <h3 class="text-xl font-bold mb-2">Pembayaran sementara tidak tersedia</h3>
-                <p class="text-secondary">{{ $paymentStatus['description'] }}</p>
-                <div class="mt-6 text-right">
-                    <button type="button" id="tripay-modal-close" class="btn-primary px-4 py-2 rounded-lg text-white font-semibold">
+                <div class="flex items-start mb-4">
+                    <svg class="w-8 h-8 text-yellow-500 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"/>
+                    </svg>
+                    <div>
+                        <h3 class="text-xl font-bold text-yellow-400">Pembayaran Sementara Tidak Tersedia</h3>
+                        <p class="text-secondary mt-2">{{ $paymentStatus['description'] }}</p>
+                    </div>
+                </div>
+                <div class="mt-6 flex gap-3 justify-end">
+                    <button type="button" id="tripay-modal-retry" class="px-4 py-2 bg-yellow-500 text-gray-900 rounded-lg hover:bg-yellow-400 transition font-semibold">
+                        Coba Lagi
+                    </button>
+                    <button type="button" id="tripay-modal-close" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition font-semibold">
                         Tutup
                     </button>
                 </div>
             </div>
         </div>
+
         <script>
             (function () {
                 var form = document.querySelector('form[action="{{ route('checkout.process') }}"]');
                 var modal = document.getElementById('tripay-modal');
                 var closeBtn = document.getElementById('tripay-modal-close');
+                var retryBtn = document.getElementById('tripay-modal-retry');
 
                 if (!form || !modal || !closeBtn) {
                     return;
                 }
 
+                // Show modal when form is submitted
                 form.addEventListener('submit', function (e) {
                     e.preventDefault();
                     modal.classList.remove('hidden');
                     modal.classList.add('flex');
                 });
 
+                // Close modal
                 closeBtn.addEventListener('click', function () {
                     modal.classList.add('hidden');
                     modal.classList.remove('flex');
                 });
+
+                // Retry from modal
+                retryBtn.addEventListener('click', function () {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    retryPaymentCheck();
+                });
             })();
         </script>
     @endif
+
+    <script>
+        /**
+         * Retry payment gateway health check
+         */
+        function retryPaymentCheck() {
+            const retryBtn = document.getElementById('retry-payment-btn');
+            const retryBtnText = document.getElementById('retry-btn-text');
+            const errorDesc = document.getElementById('payment-error-description');
+            const alert = document.getElementById('payment-unavailable-alert');
+
+            if (!retryBtn || !retryBtnText) return;
+
+            // Show loading state
+            retryBtn.disabled = true;
+            retryBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            retryBtnText.textContent = 'Memeriksa...';
+
+            // Animate the retry icon
+            const icon = retryBtn.querySelector('svg');
+            if (icon) {
+                icon.classList.add('animate-spin');
+            }
+
+            // Make AJAX request
+            fetch('{{ route('payment.health-check') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.available) {
+                    // Success! Reload page to show payment methods
+                    if (errorDesc) {
+                        errorDesc.textContent = 'Pembayaran tersedia! Memuat ulang halaman...';
+                    }
+                    if (alert) {
+                        alert.classList.remove('bg-yellow-900/30', 'border-yellow-500/50', 'text-yellow-300');
+                        alert.classList.add('bg-green-900/30', 'border-green-500/50', 'text-green-300');
+                    }
+
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    // Still unavailable
+                    if (errorDesc) {
+                        errorDesc.textContent = data.description || 'Tripay masih belum tersedia. Silakan coba lagi nanti.';
+                    }
+
+                    // Reset button state
+                    retryBtn.disabled = false;
+                    retryBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                    retryBtnText.textContent = 'Coba Lagi';
+                    if (icon) {
+                        icon.classList.remove('animate-spin');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Health check error:', error);
+
+                if (errorDesc) {
+                    errorDesc.textContent = 'Gagal memeriksa status. Silakan refresh halaman atau coba lagi.';
+                }
+
+                // Reset button state
+                retryBtn.disabled = false;
+                retryBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+                retryBtnText.textContent = 'Coba Lagi';
+                if (icon) {
+                    icon.classList.remove('animate-spin');
+                }
+            });
+        }
+    </script>
 
 </body>
 </html>

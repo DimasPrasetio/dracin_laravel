@@ -48,32 +48,68 @@ class CheckoutController extends Controller
                 ->with('error', 'Paket tidak valid');
         }
 
+        // Check payment gateway availability with retry logic
         $paymentStatus = $this->tripayService->isAvailable();
-        if (!$paymentStatus['available']) {
-            $channels = [];
-            return view('frontend.checkout', compact('package', 'packageData', 'channels', 'paymentStatus'));
-        }
+        $channels = [];
 
-        try {
-            // Get available payment channels
-            $allChannels = $this->tripayService->getPaymentChannels();
+        // Only fetch channels if payment gateway is available
+        if ($paymentStatus['available']) {
+            try {
+                // Get available payment channels with automatic retry
+                $allChannels = $this->tripayService->getPaymentChannels();
 
-            // Filter only required channels
-            $channels = collect($allChannels)->filter(function ($channel) {
-                return in_array($channel['group'], ['Virtual Account', 'E-Wallet', 'Convenience Store']) &&
-                       ($channel['code'] === 'QRIS' ||
-                        in_array($channel['code'], ['BCAVA', 'BNIVA', 'BRIVA', 'MANDIRIVA', 'PERMATAVA']));
-            })->values()->all();
+                // Filter only required channels
+                $channels = collect($allChannels)->filter(function ($channel) {
+                    return in_array($channel['group'], ['Virtual Account', 'E-Wallet', 'Convenience Store']) &&
+                           ($channel['code'] === 'QRIS' ||
+                            in_array($channel['code'], ['BCAVA', 'BNIVA', 'BRIVA', 'MANDIRIVA', 'PERMATAVA']));
+                })->values()->all();
 
-        } catch (TripayException $e) {
-            Log::error('Failed to fetch payment channels for checkout', [
-                'error' => $e->getMessage(),
-            ]);
+            } catch (TripayException $e) {
+                Log::error('Failed to fetch payment channels for checkout', [
+                    'error' => $e->getMessage(),
+                    'package' => $package,
+                ]);
 
-            $channels = [];
+                // Update payment status to reflect the error
+                $paymentStatus = [
+                    'available' => false,
+                    'reason' => 'channels_fetch_failed',
+                    'description' => 'Gagal memuat metode pembayaran. Silakan coba lagi.',
+                ];
+            }
         }
 
         return view('frontend.checkout', compact('package', 'packageData', 'channels', 'paymentStatus'));
+    }
+
+    /**
+     * Retry payment gateway health check (AJAX)
+     */
+    public function retryHealthCheck()
+    {
+        try {
+            $paymentStatus = $this->tripayService->refreshHealthStatus();
+
+            return response()->json([
+                'success' => true,
+                'available' => $paymentStatus['available'],
+                'reason' => $paymentStatus['reason'] ?? null,
+                'description' => $paymentStatus['description'],
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Health check retry failed', [
+                'error' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'available' => false,
+                'reason' => 'retry_failed',
+                'description' => 'Gagal memeriksa status. Silakan refresh halaman.',
+            ], 500);
+        }
     }
 
     /**
