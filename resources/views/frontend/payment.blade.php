@@ -248,9 +248,29 @@
                             </div>
                         </div>
 
+                        @php
+                            $packagePrice = \App\Models\Payment::getPackagePrice($payment->package);
+                            $feeAmount = $payment->amount - $packagePrice;
+                        @endphp
+
+                        <div class="border-t pt-4 mb-4" style="border-color: #2B2B2B;">
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-secondary">Harga Paket:</span>
+                                    <span class="font-medium">Rp {{ number_format($packagePrice, 0, ',', '.') }}</span>
+                                </div>
+                                @if($feeAmount > 0)
+                                <div class="flex justify-between">
+                                    <span class="text-secondary">Biaya Layanan:</span>
+                                    <span class="font-medium text-accent">Rp {{ number_format($feeAmount, 0, ',', '.') }}</span>
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+
                         <div class="border-t pt-4 mb-6" style="border-color: #2B2B2B;">
                             <div class="flex justify-between items-center">
-                                <span class="text-lg font-semibold">Total</span>
+                                <span class="text-lg font-semibold">Total Pembayaran</span>
                                 <span class="text-2xl font-bold text-accent">Rp {{ number_format($payment->amount, 0, ',', '.') }}</span>
                             </div>
                         </div>

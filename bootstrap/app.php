@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
         ]);
+
+        // Exclude Tripay callback from CSRF verification
+        $middleware->validateCsrfTokens(except: [
+            '/payment/callback',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

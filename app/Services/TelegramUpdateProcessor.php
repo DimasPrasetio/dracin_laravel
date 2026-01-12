@@ -140,12 +140,25 @@ class TelegramUpdateProcessor
                 );
                 $expiredAt = $existingPayment->expired_at?->format('d M Y H:i');
 
-                $caption = "<b>QRIS VIP {$packageData['name']}</b>\n";
-                $caption .= "Harga: Rp " . number_format($packageData['price'], 0, ',', '.') . "\n";
-                if ($expiredAt) {
-                    $caption .= "Berlaku sampai: {$expiredAt}\n";
+                $basePrice = $packageData['price'];
+                $totalAmount = $existingPayment->amount;
+                $feeAmount = $totalAmount - $basePrice;
+
+                $caption = "<b>QRIS VIP {$packageData['name']}</b>\n\n";
+                $caption .= "💰 <b>Detail Pembayaran:</b>\n";
+                $caption .= "Harga Paket: Rp " . number_format($basePrice, 0, ',', '.') . "\n";
+                if ($feeAmount > 0) {
+                    $caption .= "Biaya Layanan: Rp " . number_format($feeAmount, 0, ',', '.') . "\n";
+                    $caption .= "─────────────────\n";
+                    $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
+                } else {
+                    $caption .= "─────────────────\n";
+                    $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
                 }
-                $caption .= "\nQRIS ini masih aktif. Silakan scan untuk pembayaran.";
+                if ($expiredAt) {
+                    $caption .= "⏰ Berlaku sampai: {$expiredAt}\n\n";
+                }
+                $caption .= "📱 QRIS ini masih aktif. Silakan scan untuk pembayaran.";
 
                 $this->sendQrImage($chatId, $qrPath, $caption);
 
@@ -173,12 +186,25 @@ class TelegramUpdateProcessor
             $qrPath = $this->generateQrImage($qrString, $payment?->tripay_reference ?? null);
             $expiredAt = $payment?->expired_at?->format('d M Y H:i');
 
-            $caption = "<b>QRIS VIP {$packageData['name']}</b>\n";
-            $caption .= "Harga: Rp " . number_format($packageData['price'], 0, ',', '.') . "\n";
-            if ($expiredAt) {
-                $caption .= "Berlaku sampai: {$expiredAt}\n";
+            $basePrice = $packageData['price'];
+            $totalAmount = $payment?->amount ?? $basePrice;
+            $feeAmount = $totalAmount - $basePrice;
+
+            $caption = "<b>QRIS VIP {$packageData['name']}</b>\n\n";
+            $caption .= "💰 <b>Detail Pembayaran:</b>\n";
+            $caption .= "Harga Paket: Rp " . number_format($basePrice, 0, ',', '.') . "\n";
+            if ($feeAmount > 0) {
+                $caption .= "Biaya Layanan: Rp " . number_format($feeAmount, 0, ',', '.') . "\n";
+                $caption .= "─────────────────\n";
+                $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
+            } else {
+                $caption .= "─────────────────\n";
+                $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
             }
-            $caption .= "\nSilakan scan QRIS ini untuk pembayaran.";
+            if ($expiredAt) {
+                $caption .= "⏰ Berlaku sampai: {$expiredAt}\n\n";
+            }
+            $caption .= "📱 Silakan scan QRIS ini untuk pembayaran.";
 
             $this->sendQrImage($chatId, $qrPath, $caption);
 

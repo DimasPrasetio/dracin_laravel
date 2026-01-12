@@ -325,17 +325,21 @@
                                 <span class="text-secondary">Durasi:</span>
                                 <span class="font-medium">{{ $packageData['duration'] }} Hari</span>
                             </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-secondary">Harga:</span>
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-secondary">Harga Paket:</span>
                                 <span class="font-medium">Rp {{ number_format($packageData['price'], 0, ',', '.') }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm mb-2" id="fee-row" style="display: none;">
+                                <span class="text-secondary">Biaya Layanan:</span>
+                                <span class="font-medium text-accent" id="fee-amount">Rp 0</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="border-t pt-4 mb-6" style="border-color: #2B2B2B;">
                         <div class="flex justify-between items-center">
-                            <span class="text-lg font-semibold">Total</span>
-                            <span class="text-2xl font-bold text-accent">Rp {{ number_format($packageData['price'], 0, ',', '.') }}</span>
+                            <span class="text-lg font-semibold">Total Pembayaran</span>
+                            <span class="text-2xl font-bold text-accent" id="total-amount">Rp {{ number_format($packageData['price'], 0, ',', '.') }}</span>
                         </div>
                     </div>
 
@@ -439,6 +443,44 @@
     @endif
 
     <script>
+        // Payment channel data with fees
+        const paymentChannels = @json($channels);
+
+        /**
+         * Update order summary when payment method is selected
+         */
+        document.addEventListener('DOMContentLoaded', function() {
+            const paymentMethodRadios = document.querySelectorAll('input[name="payment_method"]');
+            const feeRow = document.getElementById('fee-row');
+            const feeAmountEl = document.getElementById('fee-amount');
+            const totalAmountEl = document.getElementById('total-amount');
+            const basePrice = {{ $packageData['price'] }};
+
+            paymentMethodRadios.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const selectedCode = this.value;
+                    const selectedChannel = paymentChannels.find(ch => ch.code === selectedCode);
+
+                    if (selectedChannel && selectedChannel.calculated_fee > 0) {
+                        // Show fee row
+                        feeRow.style.display = 'flex';
+                        feeAmountEl.textContent = 'Rp ' + selectedChannel.calculated_fee.toLocaleString('id-ID');
+                        totalAmountEl.textContent = 'Rp ' + selectedChannel.total_amount.toLocaleString('id-ID');
+                    } else {
+                        // Hide fee row if no fee
+                        feeRow.style.display = 'none';
+                        totalAmountEl.textContent = 'Rp ' + basePrice.toLocaleString('id-ID');
+                    }
+                });
+            });
+
+            // Trigger change event on page load if any radio is already checked
+            const checkedRadio = document.querySelector('input[name="payment_method"]:checked');
+            if (checkedRadio) {
+                checkedRadio.dispatchEvent(new Event('change'));
+            }
+        });
+
         /**
          * Retry payment gateway health check
          */

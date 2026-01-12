@@ -58,11 +58,24 @@ class CheckoutController extends Controller
                 // Get available payment channels with automatic retry
                 $allChannels = $this->tripayService->getPaymentChannels();
 
-                // Filter only required channels
+                // Filter only required channels and calculate fees
                 $channels = collect($allChannels)->filter(function ($channel) {
                     return in_array($channel['group'], ['Virtual Account', 'E-Wallet', 'Convenience Store']) &&
                            ($channel['code'] === 'QRIS' ||
                             in_array($channel['code'], ['BCAVA', 'BNIVA', 'BRIVA', 'MANDIRIVA', 'PERMATAVA']));
+                })->map(function ($channel) use ($packageData) {
+                    // Calculate fee for this channel
+                    $baseAmount = $packageData['price'];
+                    $feeFlat = $channel['fee_customer']['flat'] ?? 0;
+                    $feePercent = $channel['fee_customer']['percent'] ?? 0;
+
+                    $feeAmount = $feeFlat + ($baseAmount * $feePercent / 100);
+                    $totalAmount = $baseAmount + $feeAmount;
+
+                    $channel['calculated_fee'] = (int) $feeAmount;
+                    $channel['total_amount'] = (int) $totalAmount;
+
+                    return $channel;
                 })->values()->all();
 
             } catch (TripayException $e) {

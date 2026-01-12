@@ -15,8 +15,8 @@ class VerifyTripayCallback
      * @var array<string>
      */
     private const TRIPAY_IPS = [
-        '103.227.253.179', // Tripay IP 1
-        '103.227.252.113', // Tripay IP 2
+        '95.111.200.230', // Tripay IPv4 (Official)
+        '2a04:3543:1000:2310:ac92:4cff:fe87:63f9', // Tripay IPv6 (Official)
     ];
 
     /**
