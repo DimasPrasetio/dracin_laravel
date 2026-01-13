@@ -163,6 +163,67 @@
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
                                     <div>
                                         <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 2</p>
+                                        <h4 class="text-base font-semibold text-gray-900">Integrasi Telegram Bot</h4>
+                                        <p class="text-xs text-gray-500">Link akun web dengan Telegram untuk sinkronisasi otomatis.</p>
+                                    </div>
+                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-xs font-semibold text-green-700">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                        </svg>
+                                        Auto-sync role
+                                    </span>
+                                </div>
+                                <div class="p-4 sm:p-5">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">Telegram User ID</label>
+                                        <div class="relative">
+                                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-green-500">
+                                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
+                                                </svg>
+                                            </span>
+                                            <input type="number" id="telegram_user_id" class="w-full pl-12 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 shadow-inner" placeholder="e.g., 1597383375">
+                                        </div>
+                                        <div class="mt-2 flex items-start gap-2 p-3 rounded-2xl bg-green-50 border border-green-100">
+                                            <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                            </svg>
+                                            <div class="text-xs text-green-700">
+                                                <p class="font-semibold mb-1">Auto-Sync Enabled:</p>
+                                                <ul class="list-disc list-inside space-y-0.5">
+                                                    <li><strong>Admin web</strong> akan otomatis jadi <strong>admin bot</strong></li>
+                                                    <li><strong>Moderator web</strong> akan otomatis jadi <strong>moderator bot</strong></li>
+                                                </ul>
+                                                <p class="mt-2 text-gray-600">Kosongkan jika user tidak memiliki akun Telegram atau belum terdaftar di bot.</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Show linked telegram info when editing -->
+                                    <div id="telegramInfo" class="hidden mt-4 p-4 rounded-2xl bg-blue-50 border border-blue-200">
+                                        <div class="flex items-start gap-3">
+                                            <div class="flex-shrink-0">
+                                                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
+                                                </svg>
+                                            </div>
+                                            <div class="flex-1">
+                                                <p class="text-sm font-semibold text-blue-900 mb-1">Currently Linked to Telegram:</p>
+                                                <div class="text-sm text-blue-700">
+                                                    <p><strong>Username:</strong> <span id="currentTelegramUsername">-</span></p>
+                                                    <p><strong>User ID:</strong> <span id="currentTelegramUserId">-</span></p>
+                                                    <p><strong>Role:</strong> <span id="currentTelegramRole" class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-200">-</span></p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
+                                <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
+                                    <div>
+                                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 3</p>
                                         <h4 class="text-base font-semibold text-gray-900">Keamanan & Hak Akses</h4>
                                         <p class="text-xs text-gray-500">Atur kata sandi yang kuat dan tentukan role.</p>
                                     </div>
@@ -204,6 +265,7 @@
                                             <select id="role" required class="w-full appearance-none pl-12 pr-10 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-inner">
                                                 <option value="">Pilih Role</option>
                                                 <option value="admin">Admin</option>
+                                                <option value="moderator">Moderator</option>
                                                 <option value="user">User</option>
                                             </select>
                                             <svg class="w-4 h-4 text-gray-400 absolute right-4 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -213,12 +275,18 @@
                                         <p class="mt-1 text-xs text-gray-500">Role menentukan akses menu dan jenis notifikasi.</p>
                                     </div>
                                 </div>
-                                <div class="mt-4 grid grid-cols-1 gap-3 text-xs text-gray-600 sm:grid-cols-2">
+                                <div class="mt-4 grid grid-cols-1 gap-3 text-xs text-gray-600 sm:grid-cols-3">
                                     <div class="flex items-start gap-2 p-3 rounded-2xl bg-blue-50 border border-blue-100">
                                         <svg class="w-4 h-4 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
                                         </svg>
                                         <p><strong>Admin</strong> memiliki akses penuh ke pengaturan film, pembayaran, telegram users, dan semua fitur manajemen.</p>
+                                    </div>
+                                    <div class="flex items-start gap-2 p-3 rounded-2xl bg-purple-50 border border-purple-100">
+                                        <svg class="w-4 h-4 text-purple-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
+                                        </svg>
+                                        <p><strong>Moderator</strong> dapat menambah film dan mengelola konten, tapi tidak bisa edit/hapus atau akses pengaturan sistem.</p>
                                     </div>
                                     <div class="flex items-start gap-2 p-3 rounded-2xl bg-gray-50 border border-gray-200">
                                         <svg class="w-4 h-4 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -323,6 +391,7 @@ $(document).ready(function() {
 
             const roleColors = {
                 'admin': 'bg-blue-100 text-blue-800 border-blue-200',
+                'moderator': 'bg-purple-100 text-purple-800 border-purple-200',
                 'user': 'bg-gray-100 text-gray-800 border-gray-200'
             };
             const roleColor = roleColors[user.role?.toLowerCase()] || 'bg-gray-100 text-gray-800 border-gray-200';
@@ -489,6 +558,8 @@ $(document).ready(function() {
         $('#modalTitle').text('Add User');
         $('#userForm')[0].reset();
         $('#userId').val('');
+        $('#telegram_user_id').val('');
+        $('#telegramInfo').addClass('hidden');
         $('#password').prop('required', true);
         $('#password').attr('type', 'password');
         $('#togglePassword').text('Show');
@@ -503,7 +574,7 @@ $(document).ready(function() {
         $('#password').prop('required', false);
         $('#passwordRequired').addClass('hidden');
         $('#passwordOptional').removeClass('hidden');
-        
+
         $.ajax({
             url: '{{ route("users.data") }}',
             method: 'GET',
@@ -515,9 +586,21 @@ $(document).ready(function() {
                 $('#email').val(data.email);
                 $('#phone').val(data.phone || '');
                 $('#role').val(data.role);
+                $('#telegram_user_id').val(data.telegram_user_id || '');
                 $('#password').val('');
                 $('#password').attr('type', 'password');
                 $('#togglePassword').text('Show');
+
+                // Show telegram info if linked
+                if (data.telegram_user_id) {
+                    $('#currentTelegramUserId').text(data.telegram_user_id);
+                    $('#currentTelegramUsername').text(data.telegram_username || '-');
+                    $('#currentTelegramRole').text(data.telegram_role || 'user');
+                    $('#telegramInfo').removeClass('hidden');
+                } else {
+                    $('#telegramInfo').addClass('hidden');
+                }
+
                 $('#userModal').removeClass('hidden');
             },
             error: function(xhr) {
@@ -561,7 +644,7 @@ $(document).ready(function() {
 
     $('#userForm').on('submit', function(e) {
         e.preventDefault();
-        
+
         const formData = {
             username: $('#username').val().trim(),
             name: $('#name').val().trim(),
@@ -569,6 +652,12 @@ $(document).ready(function() {
             phone: $('#phone').val().trim(),
             role: $('#role').val()
         };
+
+        // Add telegram_user_id if provided
+        const telegramUserId = $('#telegram_user_id').val();
+        if (telegramUserId) {
+            formData.telegram_user_id = telegramUserId;
+        }
 
         const password = $('#password').val();
         if (password) {

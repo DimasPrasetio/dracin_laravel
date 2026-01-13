@@ -12,9 +12,11 @@ class DatabaseSeeder extends Seeder
 
     public function run(): void
     {
+        // Important: TelegramAdminSeeder must run first
+        // so telegram users exist before linking in UserSeeder
         $this->call([
-            UserSeeder::class,
             TelegramAdminSeeder::class,
+            UserSeeder::class,
         ]);
     }
 }
