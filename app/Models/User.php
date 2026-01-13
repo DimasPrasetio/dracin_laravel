@@ -111,6 +111,14 @@ class User extends Authenticatable
     }
 
     /**
+     * Relationship: Linked telegram user (reverse relationship)
+     */
+    public function linkedTelegramUser()
+    {
+        return $this->hasOne(TelegramUser::class, 'linked_user_id');
+    }
+
+    /**
      * Scope: Get only admins
      */
     public function scopeAdmins($query)
