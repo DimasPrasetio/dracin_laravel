@@ -156,8 +156,8 @@ class TelegramUpdateProcessor
                 $expiredAt = $existingPayment->expired_at?->format('d M Y H:i');
 
                 $basePrice = $packageData['price'];
-                $totalAmount = $existingPayment->amount;
-                $feeAmount = $totalAmount - $basePrice;
+                $feeAmount = $this->getQrisFeeAmount($basePrice);
+                $totalAmount = $basePrice + $feeAmount;
 
                 $caption = "<b>QRIS VIP {$packageData['name']}</b>\n\n";
                 $caption .= "💰 <b>Detail Pembayaran:</b>\n";
@@ -210,8 +210,8 @@ class TelegramUpdateProcessor
             $expiredAt = $payment?->expired_at?->format('d M Y H:i');
 
             $basePrice = $packageData['price'];
-            $totalAmount = $payment?->amount ?? $basePrice;
-            $feeAmount = $totalAmount - $basePrice;
+            $feeAmount = $this->getQrisFeeAmount($basePrice);
+            $totalAmount = $basePrice + $feeAmount;
 
             $caption = "<b>QRIS VIP {$packageData['name']}</b>\n\n";
             $caption .= "💰 <b>Detail Pembayaran:</b>\n";
@@ -310,6 +310,33 @@ class TelegramUpdateProcessor
 
         // File will be cleaned up by scheduled task (storage:cleanup-temp)
         // This ensures Telegram has time to download the image
+    }
+
+    private function getQrisFeeAmount(int $baseAmount): int
+    {
+        try {
+            $channels = $this->tripayService->getPaymentChannels();
+            $qrisChannel = collect($channels)->firstWhere('code', 'QRIS');
+
+            if (!$qrisChannel || !isset($qrisChannel['fee_customer'])) {
+                return 0;
+            }
+
+            $feeFlat = $qrisChannel['fee_customer']['flat'] ?? 0;
+            $feePercent = $qrisChannel['fee_customer']['percent'] ?? 0;
+
+            return (int) ($feeFlat + ($baseAmount * $feePercent / 100));
+        } catch (TripayException $e) {
+            Log::warning('Failed to fetch QRIS fee from Tripay', [
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        } catch (\Exception $e) {
+            Log::warning('Unexpected error while calculating QRIS fee', [
+                'error' => $e->getMessage(),
+            ]);
+            return 0;
+        }
     }
 
     /**
