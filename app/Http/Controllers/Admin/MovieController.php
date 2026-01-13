@@ -150,7 +150,7 @@ class MovieController extends Controller
                 'thumbnail_file_id' => $thumbnailFileId,
                 'total_parts' => $request->total_parts,
                 'video_parts' => $videoParts,
-                'created_by' => auth()->id(),
+                'created_by' => optional($request->user())->id ?? 1,
             ]);
 
             // Clean up temp thumbnail
@@ -376,11 +376,15 @@ class MovieController extends Controller
 
         // Calculate overall stats
         $overallPayments = Payment::selectRaw('COUNT(*) as vip_access, SUM(amount) as revenue')
-            ->whereHas('videoPart.movie')
+            ->whereHas('videoPart', function ($query) {
+                $query->whereHas('movie');
+            })
             ->first();
 
         $overallViews = ViewLog::selectRaw('COUNT(*) as views')
-            ->whereHas('videoPart.movie')
+            ->whereHas('videoPart', function ($query) {
+                $query->whereHas('movie');
+            })
             ->first();
 
         $stats = [

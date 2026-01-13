@@ -6,8 +6,8 @@
 <div class="animate-fade-in space-y-6">
     <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-            <h2 class="text-3xl font-bold text-white">Movie Transactions</h2>
-            <p class="mt-1 text-sm text-white/80">Track revenue and engagement for each movie</p>
+            <h2 class="text-3xl font-bold text-gray-900">Movie Transactions</h2>
+            <p class="mt-1 text-sm text-gray-600">Track revenue and engagement for each movie</p>
         </div>
     </div>
 

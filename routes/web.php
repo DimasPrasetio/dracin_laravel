@@ -68,6 +68,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/movies/create', [MovieController::class, 'create'])->name('movies.create');
         Route::post('/movies', [MovieController::class, 'store'])->name('movies.store');
 
+        // Movie Transactions/Analytics - Must be before {movie} routes
+        Route::middleware('admin.only')->group(function () {
+            Route::get('/movies/transactions', [MovieController::class, 'transactions'])->name('movies.transactions');
+            Route::get('/movies/transactions/data', [MovieController::class, 'transactionsData'])->name('movies.transactions.data');
+            Route::get('/movies/{movie}/transactions', [MovieController::class, 'transactionDetails'])->name('movies.transaction-details');
+        });
+
         // Admin Only Movie Routes
         Route::middleware('admin.only')->group(function () {
             Route::get('/movies/{movie}', [MovieController::class, 'show'])->name('movies.show');
@@ -111,10 +118,5 @@ Route::middleware('auth')->group(function () {
         Route::get('/view-logs/analytics', [ViewLogController::class, 'analytics'])->name('view-logs.analytics');
         Route::get('/view-logs/data', [ViewLogController::class, 'data'])->name('view-logs.data');
         Route::get('/view-logs/user/{telegramUserId}', [ViewLogController::class, 'userHistory'])->name('view-logs.user-history');
-
-        // Movie Transactions/Analytics
-        Route::get('/movies/transactions', [MovieController::class, 'transactions'])->name('movies.transactions');
-        Route::post('/movies/transactions/data', [MovieController::class, 'transactionsData'])->name('movies.transactions.data');
-        Route::get('/movies/{movie}/transactions', [MovieController::class, 'transactionDetails'])->name('movies.transaction-details');
     });
 });

@@ -6,8 +6,8 @@
 <div class="animate-fade-in space-y-6">
     <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-            <h2 class="text-3xl font-bold text-white">Telegram Users</h2>
-            <p class="mt-1 text-sm text-white/80">Daftar user yang menggunakan layanan bot (VIP users ditampilkan pertama)</p>
+            <h2 class="text-3xl font-bold text-gray-900">Telegram Users</h2>
+            <p class="mt-1 text-sm text-gray-600">Daftar user yang menggunakan layanan bot (VIP users ditampilkan pertama)</p>
         </div>
     </div>
 

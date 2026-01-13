@@ -3,265 +3,275 @@
 @section('title', 'Bot Admin Management')
 
 @section('content')
-<div class="container-fluid py-4">
+<div class="animate-fade-in space-y-6">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-            <h2 class="h3 mb-1">Bot Admin Management</h2>
-            <p class="text-muted mb-0">Kelola admin dan moderator bot Telegram</p>
+            <h2 class="text-3xl font-bold text-gray-900">Bot Admin Management</h2>
+            <p class="mt-1 text-sm text-gray-600">Kelola admin dan moderator bot Telegram</p>
         </div>
-        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#permissionMatrixModal">
-            <i class="fas fa-info-circle"></i> Permission Matrix
+        <button onclick="showPermissionMatrix()" class="inline-flex items-center px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-sm">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Permission Matrix
         </button>
     </div>
 
     <!-- Statistics Cards -->
-    <div class="row mb-4" id="stats-cards">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1 small">Total Users</p>
-                            <h4 class="mb-0" id="stat-total-users">-</h4>
-                        </div>
-                        <div class="text-primary">
-                            <i class="fas fa-users fa-2x opacity-50"></i>
-                        </div>
-                    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 font-medium">Total Users</p>
+                    <p id="stat-total-users" class="text-2xl font-bold text-blue-600 mt-1">-</p>
+                </div>
+                <div class="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1 small">Admins</p>
-                            <h4 class="mb-0 text-danger" id="stat-total-admins">-</h4>
-                        </div>
-                        <div class="text-danger">
-                            <i class="fas fa-user-shield fa-2x opacity-50"></i>
-                        </div>
-                    </div>
+
+        <div class="bg-gradient-to-br from-red-50 to-rose-50 rounded-xl p-4 border border-red-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 font-medium">Admins</p>
+                    <p id="stat-total-admins" class="text-2xl font-bold text-red-600 mt-1">-</p>
+                </div>
+                <div class="w-12 h-12 bg-red-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1 small">Moderators</p>
-                            <h4 class="mb-0 text-warning" id="stat-total-moderators">-</h4>
-                        </div>
-                        <div class="text-warning">
-                            <i class="fas fa-user-cog fa-2x opacity-50"></i>
-                        </div>
-                    </div>
+
+        <div class="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-4 border border-yellow-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 font-medium">Moderators</p>
+                    <p id="stat-total-moderators" class="text-2xl font-bold text-yellow-600 mt-1">-</p>
+                </div>
+                <div class="w-12 h-12 bg-yellow-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="text-muted mb-1 small">VIP Users</p>
-                            <h4 class="mb-0 text-success" id="stat-total-vip">-</h4>
-                        </div>
-                        <div class="text-success">
-                            <i class="fas fa-crown fa-2x opacity-50"></i>
-                        </div>
-                    </div>
+
+        <div class="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-4 border border-green-100">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-600 font-medium">VIP Users</p>
+                    <p id="stat-total-vip" class="text-2xl font-bold text-green-600 mt-1">-</p>
+                </div>
+                <div class="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"></path>
+                    </svg>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Main Table Card -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white py-3">
-            <div class="row align-items-center">
-                <div class="col-md-6">
-                    <h5 class="mb-0">Telegram Users</h5>
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+        <div class="px-6 py-5 border-b border-gray-100">
+            <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-900">Telegram Users</h3>
+                    <p class="mt-1 text-sm text-gray-600">List of all bot users with their roles</p>
                 </div>
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="search-input" placeholder="Search by username, name, telegram ID...">
-                        <button class="btn btn-outline-secondary" type="button" id="search-btn">
-                            <i class="fas fa-search"></i>
-                        </button>
+                <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <input type="text" id="search-input" placeholder="Search users..." class="w-64 px-4 py-2 pl-10 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                        <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0" id="users-table">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Telegram ID</th>
-                            <th>User Info</th>
-                            <th>Role</th>
-                            <th>VIP Status</th>
-                            <th>Linked Web User</th>
-                            <th>Joined</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="users-tbody">
-                        <tr>
-                            <td colspan="7" class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full" id="users-table">
+                <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Telegram ID</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">User Info</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Role</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">VIP Status</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Linked User</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Joined</th>
+                        <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="users-tbody" class="bg-white divide-y divide-gray-100">
+                    <tr>
+                        <td colspan="7" class="px-6 py-12 text-center">
+                            <div class="flex justify-center">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <div class="card-footer bg-white">
-            <div class="d-flex justify-content-between align-items-center">
-                <div class="text-muted small" id="pagination-info">
+
+        <div class="px-6 py-4 border-t border-gray-100 bg-gray-50">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="text-sm text-gray-600" id="pagination-info">
                     Showing 0 to 0 of 0 entries
                 </div>
-                <nav id="pagination-nav"></nav>
+                <div class="flex items-center space-x-2" id="pagination-nav">
+                </div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Permission Matrix Modal -->
-<div class="modal fade" id="permissionMatrixModal" tabindex="-1" aria-labelledby="permissionMatrixModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="permissionMatrixModalLabel">
-                    <i class="fas fa-shield-alt"></i> Permission Matrix
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="permissionModal" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="relative w-full max-w-4xl bg-white rounded-2xl shadow-2xl">
+            <div class="px-6 py-4 border-b border-gray-100">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900">Permission Matrix</h3>
+                    <button onclick="closePermissionModal()" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <div class="modal-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Permission</th>
-                                <th class="text-center"><span class="badge bg-secondary">User</span></th>
-                                <th class="text-center"><span class="badge bg-warning">Moderator</span></th>
-                                <th class="text-center"><span class="badge bg-danger">Admin</span></th>
+
+            <div class="p-6">
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse border border-gray-200 rounded-lg">
+                        <thead>
+                            <tr class="bg-gray-50">
+                                <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700 border border-gray-200">Permission</th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border border-gray-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">User</span>
+                                </th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border border-gray-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Moderator</span>
+                                </th>
+                                <th class="px-4 py-3 text-center text-sm font-semibold text-gray-700 border border-gray-200">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Admin</span>
+                                </th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bg-white">
                             <tr>
-                                <td><i class="fas fa-eye text-muted"></i> View Movies</td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">View Movies</td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Add Movies</td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
                             </tr>
                             <tr>
-                                <td><i class="fas fa-plus text-muted"></i> Add Movies</td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Edit Movies</td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                            </tr>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Delete Movies</td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
                             </tr>
                             <tr>
-                                <td><i class="fas fa-edit text-muted"></i> Edit Movies</td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                                <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Manage VIP</td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
                             </tr>
-                            <tr>
-                                <td><i class="fas fa-trash text-muted"></i> Delete Movies</td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td><i class="fas fa-crown text-muted"></i> Manage VIP</td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td><i class="fas fa-users text-muted"></i> Manage Users</td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td><i class="fas fa-credit-card text-muted"></i> Manage Payments</td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
-                            </tr>
-                            <tr>
-                                <td><i class="fas fa-chart-bar text-muted"></i> View Analytics</td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-times text-danger"></i></td>
-                                <td class="text-center"><i class="fas fa-check text-success"></i></td>
+                            <tr class="bg-gray-50">
+                                <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Manage Users</td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
-                <div class="alert alert-info mb-0">
-                    <strong><i class="fas fa-info-circle"></i> Note:</strong>
-                    <ul class="mb-0 mt-2">
+
+                <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p class="text-sm font-semibold text-blue-900 mb-2">Note:</p>
+                    <ul class="text-sm text-blue-800 space-y-1 list-disc list-inside">
                         <li><strong>User:</strong> Regular user, can only view movies</li>
-                        <li><strong>Moderator:</strong> Can add new movies via bot, but cannot edit, delete, or manage other features</li>
-                        <li><strong>Admin:</strong> Full access to all features including user management, VIP management, and payments</li>
+                        <li><strong>Moderator:</strong> Can add new movies via bot</li>
+                        <li><strong>Admin:</strong> Full access to all features</li>
                     </ul>
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Role Change Modal -->
-<div class="modal fade" id="roleChangeModal" tabindex="-1" aria-labelledby="roleChangeModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="roleChangeModalLabel">Change User Role</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<div id="roleChangeModal" class="fixed inset-0 z-50 hidden bg-gray-900/50 backdrop-blur-sm">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="relative w-full max-w-md bg-white rounded-2xl shadow-2xl">
+            <div class="px-6 py-4 border-b border-gray-100">
+                <h3 class="text-lg font-semibold text-gray-900">Change User Role</h3>
             </div>
-            <div class="modal-body">
-                <p class="mb-3">Select new role for <strong id="roleChangeUserName"></strong>:</p>
+
+            <div class="p-6">
+                <p class="mb-4 text-sm text-gray-600">Select new role for <strong id="roleChangeUserName"></strong>:</p>
                 <input type="hidden" id="roleChangeUserId">
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="radio" name="newRole" id="roleUser" value="user">
-                    <label class="form-check-label" for="roleUser">
-                        <span class="badge bg-secondary">User</span>
-                        <small class="text-muted d-block">Can only view movies</small>
+
+                <div class="space-y-3">
+                    <label class="flex items-start p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 transition-colors">
+                        <input type="radio" name="newRole" value="user" class="mt-0.5 w-4 h-4 text-blue-600">
+                        <div class="ml-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">User</span>
+                            <p class="text-xs text-gray-500 mt-1">Can only view movies</p>
+                        </div>
                     </label>
-                </div>
-                <div class="form-check mb-2">
-                    <input class="form-check-input" type="radio" name="newRole" id="roleModerator" value="moderator">
-                    <label class="form-check-label" for="roleModerator">
-                        <span class="badge bg-warning">Moderator</span>
-                        <small class="text-muted d-block">Can add movies only</small>
+
+                    <label class="flex items-start p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-yellow-300 transition-colors">
+                        <input type="radio" name="newRole" value="moderator" class="mt-0.5 w-4 h-4 text-yellow-600">
+                        <div class="ml-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Moderator</span>
+                            <p class="text-xs text-gray-500 mt-1">Can add movies only</p>
+                        </div>
                     </label>
-                </div>
-                <div class="form-check">
-                    <input class="form-check-input" type="radio" name="newRole" id="roleAdmin" value="admin">
-                    <label class="form-check-label" for="roleAdmin">
-                        <span class="badge bg-danger">Admin</span>
-                        <small class="text-muted d-block">Full access to all features</small>
+
+                    <label class="flex items-start p-3 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-red-300 transition-colors">
+                        <input type="radio" name="newRole" value="admin" class="mt-0.5 w-4 h-4 text-red-600">
+                        <div class="ml-3">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Admin</span>
+                            <p class="text-xs text-gray-500 mt-1">Full access to all features</p>
+                        </div>
                     </label>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="confirmRoleChange()">Save Changes</button>
+
+            <div class="px-6 py-4 border-t border-gray-100 bg-gray-50 flex gap-3">
+                <button onclick="closeRoleModal()" class="flex-1 px-4 py-2 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="confirmRoleChange()" class="flex-1 px-4 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                    Save Changes
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+@endsection
 
 @push('scripts')
 <script>
@@ -289,9 +299,9 @@ function loadUsers(page = 1) {
 
     tbody.innerHTML = `
         <tr>
-            <td colspan="7" class="text-center py-4">
-                <div class="spinner-border text-primary" role="status">
-                    <span class="visually-hidden">Loading...</span>
+            <td colspan="7" class="px-6 py-12 text-center">
+                <div class="flex justify-center">
+                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
             </td>
         </tr>
@@ -308,13 +318,13 @@ function loadUsers(page = 1) {
         .then(data => {
             renderUsersTable(data);
             renderPagination(data);
-            loadStats(); // Refresh stats
+            loadStats();
         })
         .catch(error => {
             console.error('Error:', error);
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="7" class="text-center text-danger py-4">
+                    <td colspan="7" class="px-6 py-12 text-center text-red-600">
                         Error loading data. Please try again.
                     </td>
                 </tr>
@@ -329,7 +339,7 @@ function renderUsersTable(data) {
     if (data.data.length === 0) {
         tbody.innerHTML = `
             <tr>
-                <td colspan="7" class="text-center text-muted py-4">
+                <td colspan="7" class="px-6 py-12 text-center text-gray-500">
                     No users found
                 </td>
             </tr>
@@ -337,60 +347,54 @@ function renderUsersTable(data) {
         return;
     }
 
-    tbody.innerHTML = data.data.map(user => `
-        <tr>
-            <td>
-                <code class="small">${user.telegram_user_id}</code>
-            </td>
-            <td>
-                <div>
-                    <strong>${user.full_name || 'N/A'}</strong>
-                    ${user.username ? `<br><small class="text-muted">@${user.username}</small>` : ''}
-                </div>
-            </td>
-            <td>
-                <span class="badge ${getRoleBadgeClass(user.role)}">
-                    ${user.role_display}
-                </span>
-            </td>
-            <td>
-                ${user.is_vip
-                    ? `<span class="badge bg-success"><i class="fas fa-crown"></i> VIP</span><br><small class="text-muted">${user.vip_until}</small>`
-                    : '<span class="badge bg-secondary">Regular</span>'
-                }
-            </td>
-            <td>
-                ${user.linked_user_name
-                    ? `<div><strong>${user.linked_user_name}</strong><br><small class="text-muted">${user.linked_user_email}</small></div>`
-                    : '<span class="text-muted">Not linked</span>'
-                }
-            </td>
-            <td>
-                <small class="text-muted">${user.created_at}</small>
-            </td>
-            <td>
-                <div class="btn-group btn-group-sm">
-                    <button class="btn btn-outline-primary" onclick="setRole(${user.id}, '${user.role}')" title="Change Role">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn btn-outline-${user.role === 'admin' ? 'danger' : 'success'}"
-                            onclick="toggleAdmin(${user.id}, '${user.role}')"
-                            title="${user.role === 'admin' ? 'Demote' : 'Promote'} to Admin">
-                        <i class="fas fa-${user.role === 'admin' ? 'user-minus' : 'user-plus'}"></i>
-                    </button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = data.data.map(user => {
+        const roleBadge = getRoleBadge(user.role);
+        const vipBadge = user.is_vip
+            ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">VIP</span><br><span class="text-xs text-gray-500">${user.vip_until}</span>`
+            : '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Regular</span>';
+
+        return `
+            <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="px-6 py-4">
+                    <code class="text-xs bg-gray-100 px-2 py-1 rounded">${user.telegram_user_id}</code>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="text-sm font-semibold text-gray-900">${user.full_name || 'N/A'}</div>
+                    ${user.username ? `<div class="text-xs text-gray-500">@${user.username}</div>` : ''}
+                </td>
+                <td class="px-6 py-4">${roleBadge}</td>
+                <td class="px-6 py-4">${vipBadge}</td>
+                <td class="px-6 py-4">
+                    ${user.linked_user_name
+                        ? `<div class="text-sm font-medium text-gray-900">${user.linked_user_name}</div><div class="text-xs text-gray-500">${user.linked_user_email}</div>`
+                        : '<span class="text-sm text-gray-400">Not linked</span>'
+                    }
+                </td>
+                <td class="px-6 py-4">
+                    <span class="text-sm text-gray-600">${user.created_at}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex items-center justify-center space-x-2">
+                        <button onclick='setRole(${user.id}, "${user.role}", "${user.full_name}")' class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Change Role">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
 }
 
-// Get badge class for role
-function getRoleBadgeClass(role) {
-    switch(role) {
-        case 'admin': return 'bg-danger';
-        case 'moderator': return 'bg-warning';
-        default: return 'bg-secondary';
-    }
+// Get role badge HTML
+function getRoleBadge(role) {
+    const badges = {
+        'admin': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Admin</span>',
+        'moderator': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Moderator</span>',
+        'user': '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">User</span>'
+    };
+    return badges[role] || badges['user'];
 }
 
 // Render pagination
@@ -398,7 +402,7 @@ function renderPagination(data) {
     const nav = document.getElementById('pagination-nav');
     const info = document.getElementById('pagination-info');
 
-    info.textContent = `Showing ${data.from || 0} to ${data.to || 0} of ${data.total} entries`;
+    info.innerHTML = `Showing <span class="font-semibold text-gray-900">${data.from || 0}</span> to <span class="font-semibold text-gray-900">${data.to || 0}</span> of <span class="font-semibold text-gray-900">${data.total}</span> entries`;
 
     if (data.last_page <= 1) {
         nav.innerHTML = '';
@@ -406,90 +410,65 @@ function renderPagination(data) {
     }
 
     let pages = '';
-    for (let i = 1; i <= data.last_page; i++) {
-        if (i === 1 || i === data.last_page || (i >= data.current_page - 2 && i <= data.current_page + 2)) {
-            pages += `
-                <li class="page-item ${i === data.current_page ? 'active' : ''}">
-                    <a class="page-link" href="#" onclick="loadUsers(${i}); return false;">${i}</a>
-                </li>
-            `;
-        } else if (i === data.current_page - 3 || i === data.current_page + 3) {
-            pages += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
-        }
-    }
+    const prevDisabled = data.current_page === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer';
+    const nextDisabled = data.current_page === data.last_page ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer';
 
-    nav.innerHTML = `
-        <ul class="pagination mb-0">
-            <li class="page-item ${data.current_page === 1 ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="loadUsers(${data.current_page - 1}); return false;">Previous</a>
-            </li>
-            ${pages}
-            <li class="page-item ${data.current_page === data.last_page ? 'disabled' : ''}">
-                <a class="page-link" href="#" onclick="loadUsers(${data.current_page + 1}); return false;">Next</a>
-            </li>
-        </ul>
+    pages += `
+        <button onclick="loadUsers(${data.current_page - 1})" ${data.current_page === 1 ? 'disabled' : ''}
+            class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg ${prevDisabled} transition-all duration-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+        </button>
     `;
-}
 
-// Toggle admin status
-function toggleAdmin(userId, currentRole) {
-    const action = currentRole === 'admin' ? 'demote' : 'promote';
+    let startPage = Math.max(1, data.current_page - 2);
+    let endPage = Math.min(data.last_page, data.current_page + 2);
 
-    if (!confirm(`Are you sure you want to ${action} this user?`)) {
-        return;
+    for (let i = startPage; i <= endPage; i++) {
+        const isActive = i === data.current_page;
+        const buttonClass = isActive
+            ? 'px-3 py-2 text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg shadow-md'
+            : 'px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-all duration-200';
+
+        pages += `<button onclick="loadUsers(${i})" class="${buttonClass}">${i}</button>`;
     }
 
-    fetch(`/bot-admins/${userId}/toggle-admin`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            showAlert('success', data.message);
-            loadUsers(currentPage);
-        } else {
-            showAlert('danger', data.message);
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showAlert('danger', 'An error occurred. Please try again.');
-    });
+    pages += `
+        <button onclick="loadUsers(${data.current_page + 1})" ${data.current_page === data.last_page ? 'disabled' : ''}
+            class="px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg ${nextDisabled} transition-all duration-200">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+            </svg>
+        </button>
+    `;
+
+    nav.innerHTML = pages;
 }
 
 // Set role - open modal
-function setRole(userId, currentRole) {
-    // Get user info from the table
-    const row = event.target.closest('tr');
-    const userName = row.querySelector('td:nth-child(2) strong').textContent;
-
-    // Set modal data
+function setRole(userId, currentRole, userName) {
     document.getElementById('roleChangeUserId').value = userId;
     document.getElementById('roleChangeUserName').textContent = userName;
 
-    // Set current role as checked
-    document.getElementById('roleUser').checked = (currentRole === 'user');
-    document.getElementById('roleModerator').checked = (currentRole === 'moderator');
-    document.getElementById('roleAdmin').checked = (currentRole === 'admin');
+    document.querySelectorAll('input[name="newRole"]').forEach(radio => {
+        radio.checked = radio.value === currentRole;
+    });
 
-    // Show modal
-    const modal = new bootstrap.Modal(document.getElementById('roleChangeModal'));
-    modal.show();
+    document.getElementById('roleChangeModal').classList.remove('hidden');
 }
 
-// Confirm role change from modal
+// Confirm role change
 function confirmRoleChange() {
     const userId = document.getElementById('roleChangeUserId').value;
     const selectedRole = document.querySelector('input[name="newRole"]:checked');
 
     if (!selectedRole) {
-        showAlert('warning', 'Please select a role.');
+        showError('Please select a role.');
         return;
     }
+
+    showLoading('Updating role...');
 
     fetch(`/bot-admins/${userId}/set-role`, {
         method: 'POST',
@@ -501,42 +480,36 @@ function confirmRoleChange() {
     })
     .then(response => response.json())
     .then(data => {
+        closeLoading();
         if (data.success) {
-            showAlert('success', data.message);
+            showSuccess(data.message);
             loadUsers(currentPage);
-            // Close modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('roleChangeModal'));
-            modal.hide();
+            closeRoleModal();
         } else {
-            showAlert('danger', data.message);
+            showError(data.message);
         }
     })
     .catch(error => {
+        closeLoading();
         console.error('Error:', error);
-        showAlert('danger', 'An error occurred. Please try again.');
+        showError('An error occurred. Please try again.');
     });
 }
 
-// Show alert
-function showAlert(type, message) {
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3`;
-    alertDiv.style.zIndex = '9999';
-    alertDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(alertDiv);
+// Modal functions
+function showPermissionMatrix() {
+    document.getElementById('permissionModal').classList.remove('hidden');
+}
 
-    setTimeout(() => alertDiv.remove(), 5000);
+function closePermissionModal() {
+    document.getElementById('permissionModal').classList.add('hidden');
+}
+
+function closeRoleModal() {
+    document.getElementById('roleChangeModal').classList.add('hidden');
 }
 
 // Search functionality
-document.getElementById('search-btn').addEventListener('click', () => {
-    currentQuery = document.getElementById('search-input').value;
-    loadUsers(1);
-});
-
 document.getElementById('search-input').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') {
         currentQuery = e.target.value;
@@ -551,4 +524,3 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 @endpush
-@endsection

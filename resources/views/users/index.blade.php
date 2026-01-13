@@ -6,8 +6,8 @@
 <div class="animate-fade-in space-y-6">
     <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-            <h2 class="text-3xl font-bold text-white">User Management</h2>
-            <p class="mt-1 text-sm text-white/80">Manage and monitor all system users</p>
+            <h2 class="text-3xl font-bold text-gray-900">User Management</h2>
+            <p class="mt-1 text-sm text-gray-600">Manage and monitor all system users</p>
         </div>
         <div class="flex items-center space-x-3">
             <button onclick="exportData()" class="inline-flex items-center px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-sm">
