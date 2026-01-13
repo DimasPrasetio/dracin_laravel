@@ -10,17 +10,6 @@ use Symfony\Component\HttpFoundation\Response;
 class VerifyTripayCallback
 {
     /**
-     * Tripay IP whitelist for callback
-     *
-     * @var array<string>
-     */
-    private const TRIPAY_IPS = [
-        '95.111.200.230', // Tripay IPv4 (Official)
-        '2a04:3543:1000:2310:ac92:4cff:fe87:63f9', // Tripay IPv6 (Official)
-        '182.10.130.63', // Tripay IPv4 (Additional)
-    ];
-
-    /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
@@ -77,20 +66,6 @@ class VerifyTripayCallback
             ], 400);
         }
 
-        // For real callback, verify IP address first
-        if (!$this->isValidTripayIp($clientIp)) {
-            Log::error('Unauthorized Tripay callback attempt - Invalid IP', [
-                'ip' => $clientIp,
-                'user_agent' => $userAgent,
-                'expected_ips' => self::TRIPAY_IPS,
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized IP address'
-            ], 403);
-        }
-
         // Verify callback signature (header first, then body)
         if (!$this->hasValidHeaderSignature($request) && !$this->hasValidBodySignature($request)) {
             Log::error('Invalid Tripay callback signature', [
@@ -112,14 +87,6 @@ class VerifyTripayCallback
         ]);
 
         return $next($request);
-    }
-
-    /**
-     * Check if IP is from Tripay
-     */
-    private function isValidTripayIp(string $ip): bool
-    {
-        return in_array($ip, self::TRIPAY_IPS, true);
     }
 
     /**
