@@ -5,8 +5,8 @@ namespace App\Services;
 use App\DataTransferObjects\PaymentData;
 use App\Exceptions\TripayException;
 use App\Models\BotState;
-use App\Models\Payment;
 use App\Models\TelegramUser;
+use App\Repositories\PaymentRepository;
 use App\Services\TripayService;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
@@ -18,13 +18,22 @@ use Telegram\Bot\Objects\Update;
 
 class TelegramUpdateProcessor
 {
-    protected $telegramService;
-    protected $videoService;
+    protected TelegramService $telegramService;
+    protected VideoService $videoService;
+    protected TripayService $tripayService;
+    protected PaymentRepository $paymentRepository;
 
-    public function __construct(TelegramService $telegramService, VideoService $videoService)
+    public function __construct(
+        TelegramService $telegramService,
+        VideoService $videoService,
+        TripayService $tripayService,
+        PaymentRepository $paymentRepository,
+    )
     {
         $this->telegramService = $telegramService;
         $this->videoService = $videoService;
+        $this->tripayService = $tripayService;
+        $this->paymentRepository = $paymentRepository;
     }
 
     /**
@@ -110,8 +119,7 @@ class TelegramUpdateProcessor
             return;
         }
 
-        $tripayService = app(TripayService::class);
-        $paymentStatus = $tripayService->isAvailable();
+        $paymentStatus = $this->tripayService->isAvailable();
         if (!$paymentStatus['available']) {
             $this->telegramService->sendMessage(
                 $chatId,
@@ -120,24 +128,31 @@ class TelegramUpdateProcessor
             return;
         }
 
-        $packageData = $tripayService->getPackageDetails($package);
+        $packageData = $this->tripayService->getPackageDetails($package);
         if (!$packageData) {
             $this->telegramService->sendMessage($chatId, 'Paket VIP tidak valid.');
             return;
         }
 
         try {
-            $existingPayment = Payment::where('telegram_user_id', $telegramUser->id)
-                ->where('status', 'pending')
-                ->where('expired_at', '>', now())
-                ->orderByDesc('created_at')
-                ->first();
+            $existingPayment = $this->paymentRepository->findReusablePayment(
+                $telegramUser->id,
+                $package,
+                'QRIS'
+            );
 
-            if ($existingPayment && $existingPayment->package === $package && $existingPayment->tripay_qr_string) {
+            if ($existingPayment && $existingPayment->tripay_qr_string) {
                 $qrPath = $this->generateQrImage(
                     $existingPayment->tripay_qr_string,
                     $existingPayment->tripay_reference
                 );
+                if (!$qrPath) {
+                    $this->telegramService->sendMessage(
+                        $chatId,
+                        'Gagal menyiapkan QRIS. Silakan coba lagi.'
+                    );
+                    return;
+                }
                 $expiredAt = $existingPayment->expired_at?->format('d M Y H:i');
 
                 $basePrice = $packageData['price'];
@@ -170,7 +185,8 @@ class TelegramUpdateProcessor
                 'payment_method' => 'QRIS',
             ], $telegramUser, $packageData['price']);
 
-            $result = $tripayService->createPayment($paymentData, 600);
+            // Use default expiry from config (no need to specify 600 anymore)
+            $result = $this->tripayService->createPayment($paymentData);
 
             $qrString = $result['qr_string'] ?? null;
             $payment = $result['payment'] ?? null;
@@ -184,6 +200,13 @@ class TelegramUpdateProcessor
             }
 
             $qrPath = $this->generateQrImage($qrString, $payment?->tripay_reference ?? null);
+            if (!$qrPath) {
+                $this->telegramService->sendMessage(
+                    $chatId,
+                    'Gagal menyiapkan QRIS. Silakan coba lagi.'
+                );
+                return;
+            }
             $expiredAt = $payment?->expired_at?->format('d M Y H:i');
 
             $basePrice = $packageData['price'];
@@ -232,7 +255,7 @@ class TelegramUpdateProcessor
     /**
      * Generate QR image and return file path
      */
-    private function generateQrImage(string $qrString, ?string $reference): string
+    private function generateQrImage(string $qrString, ?string $reference): ?string
     {
         $dir = storage_path('app/qris');
         if (!is_dir($dir)) {
@@ -247,28 +270,46 @@ class TelegramUpdateProcessor
             'scale' => 6,
         ]);
 
-        (new QRCode($options))->render($qrString, $filePath);
+        try {
+            (new QRCode($options))->render($qrString, $filePath);
+        } catch (\Throwable $e) {
+            Log::error('Failed to generate QR code image', [
+                'reference' => $reference,
+                'error' => $e->getMessage(),
+            ]);
+            return null;
+        }
 
         return $filePath;
     }
 
     /**
-     * Send QR image and clean up file afterward
+     * Send QR image
+     * Note: File cleanup is handled by scheduled task, not immediately
      */
     private function sendQrImage(int $chatId, string $filePath, string $caption): void
     {
-        try {
-            Telegram::sendPhoto([
+        if (empty($filePath) || !is_file($filePath)) {
+            Log::warning('QR image path missing or invalid', [
                 'chat_id' => $chatId,
-                'photo' => InputFile::create($filePath),
-                'caption' => $caption,
-                'parse_mode' => 'HTML',
+                'path' => $filePath,
             ]);
-        } finally {
-            if (is_file($filePath)) {
-                @unlink($filePath);
-            }
+            $this->telegramService->sendMessage(
+                $chatId,
+                'Gagal memuat QRIS. Silakan coba lagi.'
+            );
+            return;
         }
+
+        Telegram::sendPhoto([
+            'chat_id' => $chatId,
+            'photo' => InputFile::create($filePath),
+            'caption' => $caption,
+            'parse_mode' => 'HTML',
+        ]);
+
+        // File will be cleaned up by scheduled task (storage:cleanup-temp)
+        // This ensures Telegram has time to download the image
     }
 
     /**
@@ -308,10 +349,10 @@ class TelegramUpdateProcessor
     private function handleConversation(BotState $botState, $message, int $chatId): void
     {
         try {
-            // Security: Only admin can use conversation
-            $adminId = (int) config('telegram.bots.default.admin_id', env('TELE_ADMIN_ID'));
-            if ($botState->telegram_user_id != $adminId) {
-                Log::warning('Non-admin user attempting conversation', [
+            // Security: Only admin and moderator can use conversation (add movie flow)
+            $authService = app(\App\Services\TelegramAuthService::class);
+            if (!$authService->canAddMovies($botState->telegram_user_id)) {
+                Log::warning('Unauthorized user attempting conversation', [
                     'user_id' => $botState->telegram_user_id
                 ]);
                 BotState::clearState($botState->telegram_user_id);

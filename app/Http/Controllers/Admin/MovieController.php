@@ -340,36 +340,53 @@ class MovieController extends Controller
         $page = $request->get('page', 1);
         $movies = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
 
+        $movieIds = $movies->pluck('id');
+        $paymentStats = collect();
+        $freeViewStats = collect();
+
+        if ($movieIds->isNotEmpty()) {
+            $paymentStats = Payment::selectRaw('video_parts.movie_id as movie_id, COUNT(*) as vip_access, SUM(payments.amount) as revenue')
+                ->join('video_parts', 'video_parts.id', '=', 'payments.video_part_id')
+                ->whereIn('video_parts.movie_id', $movieIds)
+                ->groupBy('video_parts.movie_id')
+                ->get()
+                ->keyBy('movie_id');
+
+            $freeViewStats = ViewLog::selectRaw('video_parts.movie_id as movie_id, COUNT(*) as free_views')
+                ->join('video_parts', 'video_parts.id', '=', 'view_logs.video_part_id')
+                ->whereIn('video_parts.movie_id', $movieIds)
+                ->where('video_parts.is_vip', false)
+                ->groupBy('video_parts.movie_id')
+                ->get()
+                ->keyBy('movie_id');
+        }
+
         // Calculate stats for each movie
-        $movies->transform(function ($movie) {
-            $payments = Payment::whereHas('videoPart', function ($q) use ($movie) {
-                $q->where('movie_id', $movie->id);
-            })->sum('amount');
+        $movies->transform(function ($movie) use ($paymentStats, $freeViewStats) {
+            $paymentStat = $paymentStats->get($movie->id);
+            $freeStat = $freeViewStats->get($movie->id);
 
-            $vipAccess = Payment::whereHas('videoPart', function ($q) use ($movie) {
-                $q->where('movie_id', $movie->id);
-            })->count();
-
-            $freeViews = ViewLog::whereHas('videoPart', function ($q) use ($movie) {
-                $q->where('movie_id', $movie->id)
-                  ->where('is_vip', false);
-            })->count();
-
-            $totalViews = $freeViews + $vipAccess;
-
-            $movie->revenue = $payments;
-            $movie->vip_access = $vipAccess;
-            $movie->free_views = $freeViews;
-            $movie->total_views = $totalViews;
+            $movie->revenue = (int) ($paymentStat->revenue ?? 0);
+            $movie->vip_access = (int) ($paymentStat->vip_access ?? 0);
+            $movie->free_views = (int) ($freeStat->free_views ?? 0);
+            $movie->total_views = $movie->free_views + $movie->vip_access;
 
             return $movie;
         });
 
         // Calculate overall stats
+        $overallPayments = Payment::selectRaw('COUNT(*) as vip_access, SUM(amount) as revenue')
+            ->whereHas('videoPart.movie')
+            ->first();
+
+        $overallViews = ViewLog::selectRaw('COUNT(*) as views')
+            ->whereHas('videoPart.movie')
+            ->first();
+
         $stats = [
-            'total_revenue' => Payment::whereHas('videoPart.movie')->sum('amount'),
-            'total_vip_access' => Payment::whereHas('videoPart.movie')->count(),
-            'total_views' => ViewLog::whereHas('videoPart.movie')->count() + Payment::whereHas('videoPart.movie')->count(),
+            'total_revenue' => (int) ($overallPayments->revenue ?? 0),
+            'total_vip_access' => (int) ($overallPayments->vip_access ?? 0),
+            'total_views' => (int) ($overallViews->views ?? 0) + (int) ($overallPayments->vip_access ?? 0),
             'active_movies' => Movie::whereNotNull('channel_message_id')->count(),
         ];
 
@@ -385,7 +402,7 @@ class MovieController extends Controller
         $movie->load('videoParts');
 
         // Get payments for this movie
-        $transactions = Payment::with(['user', 'videoPart'])
+        $transactions = Payment::with(['telegramUser', 'videoPart'])
             ->whereHas('videoPart', function ($q) use ($movie) {
                 $q->where('movie_id', $movie->id);
             })
@@ -402,9 +419,25 @@ class MovieController extends Controller
 
         // Calculate parts performance
         $partsStats = [];
+        $partIds = $movie->videoParts->pluck('id');
+        $partViewCounts = collect();
+        $partPaymentCounts = collect();
+
+        if ($partIds->isNotEmpty()) {
+            $partViewCounts = ViewLog::selectRaw('video_part_id, COUNT(*) as views')
+                ->whereIn('video_part_id', $partIds)
+                ->groupBy('video_part_id')
+                ->pluck('views', 'video_part_id');
+
+            $partPaymentCounts = Payment::selectRaw('video_part_id, COUNT(*) as payments')
+                ->whereIn('video_part_id', $partIds)
+                ->groupBy('video_part_id')
+                ->pluck('payments', 'video_part_id');
+        }
+
         foreach ($movie->videoParts as $part) {
-            $partViews = ViewLog::where('video_part_id', $part->id)->count();
-            $partPayments = Payment::where('video_part_id', $part->id)->count();
+            $partViews = (int) ($partViewCounts[$part->id] ?? 0);
+            $partPayments = (int) ($partPaymentCounts[$part->id] ?? 0);
 
             $partsStats[] = [
                 'part_number' => $part->part_number,
@@ -416,9 +449,9 @@ class MovieController extends Controller
         $stats['parts'] = $partsStats;
 
         // Calculate conversion rate
-        $totalFreeViews = ViewLog::whereHas('videoPart', function ($q) use ($movie) {
-            $q->where('movie_id', $movie->id)->where('is_vip', false);
-        })->count();
+        $totalFreeViews = $movie->videoParts
+            ->filter(fn ($part) => !$part->is_vip)
+            ->sum(fn ($part) => (int) ($partViewCounts[$part->id] ?? 0));
 
         if ($totalFreeViews > 0) {
             $stats['conversion_rate'] = round(($stats['vip_access'] / $totalFreeViews) * 100, 1);

@@ -9,31 +9,52 @@ use Carbon\Carbon;
 class VipService
 {
     /**
-     * Get VIP packages with prices
+     * Get VIP packages with prices from config
      */
     public function getPackages(): array
     {
-        return [
-            ['package' => '1day', 'duration' => 1, 'price' => 2500, 'label' => '1 Hari - Rp 2.500'],
-            ['package' => '3days', 'duration' => 3, 'price' => 6000, 'label' => '3 Hari - Rp 6.000'],
-            ['package' => '7days', 'duration' => 7, 'price' => 10000, 'label' => '7 Hari - Rp 10.000'],
-            ['package' => '30days', 'duration' => 30, 'price' => 25000, 'label' => '30 Hari - Rp 25.000'],
-        ];
+        $packages = config('vip.packages', []);
+        $result = [];
+
+        foreach ($packages as $key => $package) {
+            $result[] = [
+                'package' => $key,
+                'duration' => $package['duration'],
+                'price' => $package['price'],
+                'label' => $package['name'] . ' - Rp ' . number_format($package['price'], 0, ',', '.'),
+            ];
+        }
+
+        return $result;
     }
 
     /**
      * Activate VIP for user
+     *
+     * @throws \InvalidArgumentException if package is invalid
+     * @throws \LogicException if user is already VIP
      */
     public function activateVip(TelegramUser $user, string $package): void
     {
-        $duration = (int) Payment::getPackageDuration($package);
+        $packageData = config("vip.packages.{$package}");
 
-        // If user already VIP, extend from current expiry
-        if ($user->isVip()) {
-            $newVipUntil = Carbon::parse($user->vip_until)->addDays($duration);
-        } else {
-            $newVipUntil = Carbon::now()->addDays($duration);
+        if (!$packageData) {
+            throw new \InvalidArgumentException("Invalid package: {$package}");
         }
+
+        // Guard clause - should never activate VIP for already-VIP users
+        // This check should be done at controller level before calling this method
+        if ($user->isVip()) {
+            throw new \LogicException(
+                'Cannot activate VIP for user who is already VIP. ' .
+                'Current VIP expires at: ' . $user->vip_until->format('Y-m-d H:i:s')
+            );
+        }
+
+        $duration = (int) $packageData['duration'];
+
+        // Always start from now - this is a new purchase, not an extension
+        $newVipUntil = Carbon::now()->addDays($duration);
 
         $user->update(['vip_until' => $newVipUntil]);
     }
@@ -43,7 +64,13 @@ class VipService
      */
     public function createPayment(TelegramUser $user, string $package): Payment
     {
-        $amount = Payment::getPackagePrice($package);
+        $packageData = config("vip.packages.{$package}");
+
+        if (!$packageData) {
+            throw new \InvalidArgumentException("Invalid package: {$package}");
+        }
+
+        $amount = $packageData['price'];
 
         return Payment::create([
             'telegram_user_id' => $user->id,

@@ -5,10 +5,9 @@ namespace App\Listeners;
 use App\Events\PaymentPaid;
 use App\Models\Payment;
 use App\Services\VipService;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
 
-class ActivateUserVip implements ShouldQueue
+class ActivateUserVip
 {
     public function __construct(
         private readonly VipService $vipService
@@ -18,12 +17,13 @@ class ActivateUserVip implements ShouldQueue
     {
         try {
             $payment = $event->payment;
-            $duration = Payment::getPackageDuration($payment->package);
 
             $this->vipService->activateVip(
                 $payment->telegramUser,
-                $duration
+                $payment->package
             );
+
+            $duration = Payment::getPackageDuration($payment->package);
 
             Log::info('VIP activated successfully', [
                 'payment_id' => $payment->id,
@@ -42,12 +42,4 @@ class ActivateUserVip implements ShouldQueue
         }
     }
 
-    public function failed(PaymentPaid $event, \Throwable $exception): void
-    {
-        Log::critical('VIP activation failed critically', [
-            'payment_id' => $event->payment->id,
-            'error' => $exception->getMessage(),
-            'trace' => $exception->getTraceAsString(),
-        ]);
-    }
 }

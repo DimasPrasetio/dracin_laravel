@@ -90,39 +90,4 @@ return [
         ],
     ],
 
-    /*
-    |--------------------------------------------------------------------------
-    | VIP Packages Configuration
-    |--------------------------------------------------------------------------
-    */
-    'packages' => [
-        '1day' => [
-            'name' => 'VIP 1 Hari',
-            'duration' => 1,
-            'price' => 2500,
-            'description' => 'Akses VIP selama 1 hari untuk menonton semua film Dracin HD',
-        ],
-        '3days' => [
-            'name' => 'VIP 3 Hari',
-            'duration' => 3,
-            'price' => 6000,
-            'description' => 'Akses VIP selama 3 hari untuk menonton semua film Dracin HD',
-            'badge' => 'Hemat 14%',
-        ],
-        '7days' => [
-            'name' => 'VIP 7 Hari',
-            'duration' => 7,
-            'price' => 10000,
-            'description' => 'Akses VIP selama 7 hari untuk menonton semua film Dracin HD',
-            'badge' => 'Hemat 43%',
-            'popular' => true,
-        ],
-        '30days' => [
-            'name' => 'VIP 30 Hari',
-            'duration' => 30,
-            'price' => 25000,
-            'description' => 'Akses VIP selama 30 hari untuk menonton semua film Dracin HD',
-            'badge' => 'Hemat 73%',
-        ],
-    ],
 ];

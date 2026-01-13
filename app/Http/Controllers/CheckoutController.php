@@ -7,18 +7,22 @@ use App\DataTransferObjects\TripayCallbackData;
 use App\Exceptions\TripayException;
 use App\Http\Requests\CheckoutRequest;
 use App\Http\Requests\TripayCallbackRequest;
+use App\Models\Payment;
 use App\Models\TelegramUser;
 use App\Repositories\PaymentRepository;
+use App\Services\PaymentStatusService;
 use App\Services\TripayService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class CheckoutController extends Controller
 {
     public function __construct(
         private readonly TripayService $tripayService,
         private readonly PaymentRepository $paymentRepository,
+        private readonly PaymentStatusService $paymentStatusService,
     ) {}
 
     /**
@@ -37,7 +41,11 @@ class CheckoutController extends Controller
     public function checkout(Request $request)
     {
         $request->validate([
-            'package' => 'required|in:1day,3days,7days,30days',
+            'package' => [
+                'required',
+                'string',
+                Rule::in(array_keys(config('vip.packages', []))),
+            ],
         ]);
 
         $package = $request->input('package');
@@ -135,11 +143,33 @@ class CheckoutController extends Controller
                 // Find or create telegram user
                 $telegramUser = $this->findOrCreateTelegramUser($request->validated());
 
+                // Check if user is already VIP - prevent duplicate purchase
+                if ($telegramUser->isVip()) {
+                    return redirect()->back()
+                        ->with('error', 'Anda masih dalam layanan VIP sampai ' .
+                               $telegramUser->vip_until->format('d M Y H:i') .
+                               '. Pembelian baru dapat dilakukan setelah VIP expired.')
+                        ->withInput();
+                }
+
                 // Get package details
                 $packageData = $this->tripayService->getPackageDetails($request->package);
 
                 if (!$packageData) {
                     throw TripayException::invalidPackage($request->package);
+                }
+
+                // Reuse pending payment if available to avoid duplicates
+                $existingPayment = $this->paymentRepository->findReusablePayment(
+                    $telegramUser->id,
+                    $request->package,
+                    $request->payment_method
+                );
+
+                if ($existingPayment && $existingPayment->tripay_reference) {
+                    return redirect()->route('payment.show', [
+                        'reference' => $existingPayment->tripay_reference,
+                    ])->with('info', 'Pembayaran sebelumnya masih aktif. Gunakan link yang sama.');
                 }
 
                 // Create payment data DTO
@@ -203,7 +233,7 @@ class CheckoutController extends Controller
             if ($payment->status === 'pending') {
                 try {
                     $tripayData = $this->tripayService->checkPaymentStatus($reference);
-                    $this->updatePaymentStatusFromTripay($payment, $tripayData);
+                    $payment = $this->updatePaymentStatusFromTripay($payment, $tripayData);
                 } catch (\Exception $e) {
                     Log::warning('Failed to check payment status', [
                         'reference' => $reference,
@@ -243,7 +273,7 @@ class CheckoutController extends Controller
             // Check from Tripay
             try {
                 $tripayData = $this->tripayService->checkPaymentStatus($reference);
-                $this->updatePaymentStatusFromTripay($payment, $tripayData);
+                $payment = $this->updatePaymentStatusFromTripay($payment, $tripayData);
             } catch (\Exception $e) {
                 Log::warning('Failed to check status via API', [
                     'reference' => $reference,
@@ -372,25 +402,48 @@ class CheckoutController extends Controller
     /**
      * Update payment status from Tripay data
      */
-    private function updatePaymentStatusFromTripay($payment, array $tripayData): void
+    private function updatePaymentStatusFromTripay(Payment $payment, array $tripayData): Payment
     {
         $tripayStatus = $tripayData['status'] ?? 'UNPAID';
         $newStatus = $this->mapTripayStatus($tripayStatus);
 
         if ($payment->status !== $newStatus) {
             $oldStatus = $payment->status;
-            $this->paymentRepository->updateStatus($payment, $newStatus);
-            $payment->refresh();
+            $payment = $this->paymentStatusService->transition($payment, $newStatus);
 
             Log::info('Payment status updated from Tripay API', [
                 'payment_id' => $payment->id,
                 'old_status' => $oldStatus,
                 'new_status' => $newStatus,
             ]);
-
-            // Dispatch event based on status
-            $this->dispatchPaymentEvent($payment, $newStatus);
         }
+
+        return $payment;
+    }
+
+    /**
+     * Check VIP status for user (AJAX endpoint)
+     */
+    public function checkVipStatus(Request $request)
+    {
+        $request->validate([
+            'telegram_user_id' => 'required|numeric|digits_between:1,20',
+        ]);
+
+        $telegramUser = TelegramUser::where('telegram_user_id', $request->telegram_user_id)->first();
+
+        if ($telegramUser && $telegramUser->isVip()) {
+            return response()->json([
+                'is_vip' => true,
+                'vip_until' => $telegramUser->vip_until->format('d M Y H:i'),
+                'message' => 'Anda masih dalam layanan VIP sampai ' . $telegramUser->vip_until->format('d M Y H:i'),
+            ]);
+        }
+
+        return response()->json([
+            'is_vip' => false,
+            'message' => 'Anda dapat melanjutkan pembelian VIP',
+        ]);
     }
 
     /**
@@ -406,16 +459,4 @@ class CheckoutController extends Controller
         };
     }
 
-    /**
-     * Dispatch payment event based on status
-     */
-    private function dispatchPaymentEvent($payment, string $status): void
-    {
-        match ($status) {
-            'paid' => event(new \App\Events\PaymentPaid($payment)),
-            'expired' => event(new \App\Events\PaymentExpired($payment)),
-            'cancelled' => event(new \App\Events\PaymentFailed($payment)),
-            default => null,
-        };
-    }
 }

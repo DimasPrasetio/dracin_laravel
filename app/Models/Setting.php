@@ -34,6 +34,18 @@ class Setting extends Model
      */
     public static function set(string $key, $value, string $description = null): void
     {
+        // Validate free_parts format
+        if ($key === 'free_parts' && !empty($value)) {
+            $parts = explode(',', $value);
+            foreach ($parts as $part) {
+                if (!ctype_digit(trim($part))) {
+                    throw new \InvalidArgumentException(
+                        'free_parts must be comma-separated integers (e.g., "1,2,3")'
+                    );
+                }
+            }
+        }
+
         self::updateOrCreate(
             ['key' => $key],
             ['value' => $value, 'description' => $description]
@@ -44,10 +56,23 @@ class Setting extends Model
 
     /**
      * Get free parts as array
+     * Returns [1] as default if value is invalid
      */
     public static function getFreeParts(): array
     {
         $value = self::get('free_parts', '1');
-        return array_map('intval', explode(',', $value));
+
+        if (empty($value)) {
+            return [1];
+        }
+
+        $parts = array_filter(array_map('trim', explode(',', $value)));
+        $validParts = array_filter($parts, fn($part) => ctype_digit($part));
+
+        if (empty($validParts)) {
+            return [1];
+        }
+
+        return array_map('intval', $validParts);
     }
 }

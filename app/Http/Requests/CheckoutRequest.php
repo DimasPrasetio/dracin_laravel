@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class CheckoutRequest extends FormRequest
 {
@@ -17,7 +18,7 @@ class CheckoutRequest extends FormRequest
             'package' => [
                 'required',
                 'string',
-                'in:1day,3days,7days,30days'
+                Rule::in(array_keys(config('vip.packages', []))),
             ],
             'telegram_user_id' => [
                 'required',
@@ -43,7 +44,8 @@ class CheckoutRequest extends FormRequest
             'payment_method' => [
                 'required',
                 'string',
-                'max:50'
+                'max:50',
+                Rule::in(config('vip.payment.allowed_methods', [])),
             ],
         ];
     }
@@ -61,6 +63,7 @@ class CheckoutRequest extends FormRequest
             'first_name.max' => 'Nama depan maksimal 255 karakter.',
             'last_name.max' => 'Nama belakang maksimal 255 karakter.',
             'payment_method.required' => 'Metode pembayaran wajib dipilih.',
+            'payment_method.in' => 'Metode pembayaran tidak tersedia.',
         ];
     }
 

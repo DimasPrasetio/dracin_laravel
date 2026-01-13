@@ -43,6 +43,23 @@ class PaymentRepository
     }
 
     /**
+     * Find existing pending payment that can be reused
+     * Only reuse if payment has at least 10 minutes remaining before expiry
+     */
+    public function findReusablePayment(int $telegramUserId, string $package, string $paymentMethod): ?Payment
+    {
+        $minimumBufferMinutes = 10;
+
+        return Payment::where('telegram_user_id', $telegramUserId)
+            ->where('package', $package)
+            ->where('payment_method', $paymentMethod)
+            ->where('status', 'pending')
+            ->where('expired_at', '>', now()->addMinutes($minimumBufferMinutes))
+            ->orderByDesc('created_at')
+            ->first();
+    }
+
+    /**
      * Find payment by merchant reference
      */
     public function findByMerchantRef(string $merchantRef): ?Payment

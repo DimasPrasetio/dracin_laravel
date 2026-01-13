@@ -5,6 +5,7 @@ namespace App\Telegram\Commands;
 use Telegram\Bot\Commands\Command;
 use App\Models\TelegramUser;
 use App\Models\VideoPart;
+use App\Models\ViewLog;
 use App\Services\TelegramService;
 
 class StartCommand extends Command
@@ -62,6 +63,16 @@ class StartCommand extends Command
         $caption = "📽️ <b>{$videoPart->movie->title}</b>\n📀 Part {$videoPart->part_number}";
 
         $telegramService->sendVideo($chatId, $videoPart->file_id, $caption);
+
+        // Log video view
+        ViewLog::create([
+            'telegram_user_id' => $user->id,
+            'video_part_id' => $videoPart->id,
+            'is_vip' => $videoPart->is_vip,
+            'source' => 'bot',
+            'device' => 'telegram',
+            'ip_address' => null,
+        ]);
     }
 
     private function sendWelcomeMessage(int $chatId, TelegramUser $user)

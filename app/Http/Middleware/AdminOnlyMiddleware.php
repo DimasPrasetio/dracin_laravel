@@ -6,20 +6,20 @@ use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class AdminMiddleware
+class AdminOnlyMiddleware
 {
     /**
      * Handle an incoming request.
-     * Allow both admin and moderator (staff) to access
+     * Only allow admin (not moderator)
      */
     public function handle(Request $request, Closure $next): Response
     {
         /** @var \App\Models\User $user */
         $user = $request->user();
 
-        // Check if user is staff (admin or moderator)
-        if (!$user || !$user->isStaff()) {
-            abort(403, 'Unauthorized access');
+        // Only admin can access
+        if (!$user || !$user->isAdmin()) {
+            abort(403, 'This action requires admin privileges');
         }
 
         return $next($request);

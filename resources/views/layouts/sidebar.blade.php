@@ -1,7 +1,10 @@
 @php
-    $isMoviesActive = request()->routeIs('movies.*');
+    $isMoviesActive = request()->routeIs('movies.index') || request()->routeIs('movies.create') || request()->routeIs('movies.edit') || request()->routeIs('movies.show');
+    $isMovieAnalyticsActive = request()->routeIs('movies.transactions*');
     $isTelegramUsersActive = request()->routeIs('telegram-users.*');
     $isPaymentsActive = request()->routeIs('payments.*');
+    $isBotAdminsActive = request()->routeIs('bot-admins.*');
+    $isViewLogsActive = request()->routeIs('view-logs.*');
     $isUsersActive = request()->routeIs('users.*');
     $isSettingsActive = request()->routeIs('settings.*');
 
@@ -55,7 +58,8 @@
             </div>
             
             <div class="space-y-1">
-                @if(auth()->user()->role === 'admin')
+                {{-- Film Management - Available for both admin and moderator --}}
+                @if(auth()->user()->isStaff())
                     <a href="{{ route('movies.index') }}"
                        class="{{ $baseItem }} {{ $isMoviesActive ? $activeItem : $inactiveItem }}"
                        aria-current="{{ $isMoviesActive ? 'page' : 'false' }}">
@@ -66,7 +70,10 @@
                         </div>
                         <span class="sidebar-text ml-4 font-semibold">Film Management</span>
                     </a>
+                @endif
 
+                {{-- Admin Only Menus --}}
+                @if(auth()->user()->isAdmin())
                     <a href="{{ route('telegram-users.index') }}"
                        class="{{ $baseItem }} {{ $isTelegramUsersActive ? $activeItem : $inactiveItem }}"
                        aria-current="{{ $isTelegramUsersActive ? 'page' : 'false' }}">
@@ -78,6 +85,17 @@
                         <span class="sidebar-text ml-4 font-semibold">Telegram Users</span>
                     </a>
 
+                    <a href="{{ route('bot-admins.index') }}"
+                       class="{{ $baseItem }} {{ $isBotAdminsActive ? $activeItem : $inactiveItem }}"
+                       aria-current="{{ $isBotAdminsActive ? 'page' : 'false' }}">
+                        <div class="{{ $baseIcon }} {{ $isBotAdminsActive ? $activeIconGrad : $inactiveIconGrad }}">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text ml-4 font-semibold">Bot Admins</span>
+                    </a>
+
                     <a href="{{ route('payments.index') }}"
                        class="{{ $baseItem }} {{ $isPaymentsActive ? $activeItem : $inactiveItem }}"
                        aria-current="{{ $isPaymentsActive ? 'page' : 'false' }}">
@@ -86,9 +104,55 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
                             </svg>
                         </div>
-                        <span class="sidebar-text ml-4 font-semibold">Transactions</span>
+                        <span class="sidebar-text ml-4 font-semibold">Payments</span>
+                    </a>
+                @endif
+            </div>
+        </div>
+
+        {{-- Analytics Section --}}
+        @if(auth()->user()->isAdmin())
+            <div>
+                <div class="section-title px-3 mb-3">
+                    <span class="section-title-text text-xs font-bold text-gray-400 uppercase tracking-wider">Analytics</span>
+                    <span class="section-title-icon"></span>
+                </div>
+
+                <div class="space-y-1">
+                    <a href="{{ route('movies.transactions') }}"
+                       class="{{ $baseItem }} {{ $isMovieAnalyticsActive ? $activeItem : $inactiveItem }}"
+                       aria-current="{{ $isMovieAnalyticsActive ? 'page' : 'false' }}">
+                        <div class="{{ $baseIcon }} {{ $isMovieAnalyticsActive ? $activeIconGrad : $inactiveIconGrad }}">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text ml-4 font-semibold">Movie Analytics</span>
                     </a>
 
+                    <a href="{{ route('view-logs.index') }}"
+                       class="{{ $baseItem }} {{ $isViewLogsActive ? $activeItem : $inactiveItem }}"
+                       aria-current="{{ $isViewLogsActive ? 'page' : 'false' }}">
+                        <div class="{{ $baseIcon }} {{ $isViewLogsActive ? $activeIconGrad : $inactiveIconGrad }}">
+                            <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <span class="sidebar-text ml-4 font-semibold">View Analytics</span>
+                    </a>
+                </div>
+            </div>
+        @endif
+
+        {{-- System Section --}}
+        @if(auth()->user()->isAdmin())
+            <div>
+                <div class="section-title px-3 mb-3">
+                    <span class="section-title-text text-xs font-bold text-gray-400 uppercase tracking-wider">System</span>
+                    <span class="section-title-icon"></span>
+                </div>
+
+                <div class="space-y-1">
                     <a href="{{ route('users.index') }}"
                        class="{{ $baseItem }} {{ $isUsersActive ? $activeItem : $inactiveItem }}"
                        aria-current="{{ $isUsersActive ? 'page' : 'false' }}">
@@ -97,7 +161,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                             </svg>
                         </div>
-                        <span class="sidebar-text ml-4 font-semibold">Admin Users</span>
+                        <span class="sidebar-text ml-4 font-semibold">Web Users</span>
                     </a>
 
                     <a href="{{ route('settings.index') }}"
@@ -111,7 +175,9 @@
                         </div>
                         <span class="sidebar-text ml-4 font-semibold">Settings</span>
                     </a>
-                @endif
+                </div>
+            </div>
+        @endif
             </div>
         </div>
     </div>

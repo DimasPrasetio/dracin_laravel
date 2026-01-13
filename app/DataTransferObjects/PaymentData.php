@@ -3,6 +3,7 @@
 namespace App\DataTransferObjects;
 
 use App\Models\TelegramUser;
+use Illuminate\Support\Str;
 
 class PaymentData
 {
@@ -27,7 +28,9 @@ class PaymentData
 
     private static function generateMerchantRef(string $telegramUserId): string
     {
-        return 'DRC-' . time() . '-' . $telegramUserId;
+        // Add random suffix to prevent collision if multiple payments in same second
+        $randomSuffix = Str::upper(Str::random(4));
+        return 'DRC-' . time() . '-' . $telegramUserId . '-' . $randomSuffix;
     }
 
     public function toArray(): array

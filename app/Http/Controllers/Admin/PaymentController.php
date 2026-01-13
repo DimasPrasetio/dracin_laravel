@@ -4,10 +4,15 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Payment;
+use App\Services\PaymentStatusService;
 use Illuminate\Http\Request;
 
 class PaymentController extends Controller
 {
+    public function __construct(
+        private readonly PaymentStatusService $paymentStatusService,
+    ) {}
+
     public function index()
     {
         return view('payments.index');
@@ -63,21 +68,12 @@ class PaymentController extends Controller
         ]);
 
         try {
-            $payment->update(['status' => $request->status]);
-
-            // If paid, activate VIP
-            if ($request->status === 'paid' && $payment->telegramUser) {
-                $duration = (int) Payment::getPackageDuration($payment->package);
-                $vipUntil = $payment->telegramUser->isVip()
-                    ? $payment->telegramUser->vip_until->copy()->addDays($duration)
-                    : now()->addDays($duration);
-
-                $payment->telegramUser->update(['vip_until' => $vipUntil]);
-            }
+            $updatedPayment = $this->paymentStatusService->transition($payment, $request->status);
 
             return response()->json([
                 'ok' => true,
                 'message' => 'Payment status updated successfully!',
+                'payment' => $updatedPayment->load('telegramUser'),
             ]);
         } catch (\Exception $e) {
             return response()->json([

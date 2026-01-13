@@ -19,6 +19,7 @@ use App\Http\Controllers\CheckoutController;
 Route::prefix('telegram')->group(function () {
     // Main webhook endpoint
     Route::post('/webhook', [TelegramWebhookController::class, 'handle'])
+        ->middleware('throttle:bot-webhook')
         ->name('telegram.webhook');
 
     // Health check endpoint

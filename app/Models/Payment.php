@@ -11,6 +11,7 @@ class Payment extends Model
 
     protected $fillable = [
         'telegram_user_id',
+        'video_part_id',
         'package',
         'amount',
         'payment_method',
@@ -39,30 +40,37 @@ class Payment extends Model
     }
 
     /**
-     * Get package duration in days
+     * Related video part (for analytics)
      */
-    public static function getPackageDuration(string $package): int
+    public function videoPart()
     {
-        return match ($package) {
-            '1day' => 1,
-            '3days' => 3,
-            '7days' => 7,
-            '30days' => 30,
-            default => 0,
-        };
+        return $this->belongsTo(VideoPart::class);
     }
 
     /**
-     * Get package price
+     * Get package duration in days from config
+     */
+    public static function getPackageDuration(string $package): int
+    {
+        $packageData = config("vip.packages.{$package}");
+        return $packageData['duration'] ?? 0;
+    }
+
+    /**
+     * Get package price from config
      */
     public static function getPackagePrice(string $package): int
     {
-        return match ($package) {
-            '1day' => 2500,
-            '3days' => 6000,
-            '7days' => 10000,
-            '30days' => 25000,
-            default => 0,
-        };
+        $packageData = config("vip.packages.{$package}");
+        return $packageData['price'] ?? 0;
+    }
+
+    /**
+     * Get package name from config
+     */
+    public static function getPackageName(string $package): string
+    {
+        $packageData = config("vip.packages.{$package}");
+        return $packageData['name'] ?? ucfirst($package);
     }
 }

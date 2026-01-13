@@ -4,10 +4,9 @@ namespace App\Listeners;
 
 use App\Events\PaymentPaid;
 use App\Services\TelegramService;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Log;
 
-class SendPaymentSuccessNotification implements ShouldQueue
+class SendPaymentSuccessNotification
 {
     public function __construct(
         private readonly TelegramService $telegramService
@@ -55,11 +54,4 @@ class SendPaymentSuccessNotification implements ShouldQueue
             . "Terima kasih sudah berlangganan Dracin HD! 🙏";
     }
 
-    public function failed(PaymentPaid $event, \Throwable $exception): void
-    {
-        Log::warning('Payment success notification failed', [
-            'payment_id' => $event->payment->id,
-            'error' => $exception->getMessage(),
-        ]);
-    }
 }

@@ -36,7 +36,8 @@ class VipCommand extends Command
             $no = $index + 1;
             $message .= "{$no}. {$package['label']}\n";
         }
-        $message .= "\nQRIS berlaku 10 menit setelah dibuat.";
+        $expiryMinutes = (int) config('vip.payment.expiry_minutes', 60);
+        $message .= "\nQRIS berlaku {$expiryMinutes} menit setelah dibuat.";
 
         $keyboard = Keyboard::make()->inline();
         foreach ($packages as $package) {

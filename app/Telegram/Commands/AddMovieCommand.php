@@ -4,11 +4,12 @@ namespace App\Telegram\Commands;
 
 use Telegram\Bot\Commands\Command;
 use App\Models\BotState;
+use App\Services\TelegramAuthService;
 
 class AddMovieCommand extends Command
 {
     protected string $name = 'addmovie';
-    protected string $description = 'Tambah film baru (Admin only)';
+    protected string $description = 'Tambah film baru (Admin & Moderator)';
 
     public function handle()
     {
@@ -16,10 +17,11 @@ class AddMovieCommand extends Command
         $telegramUser = $update->getMessage()->from;
         $message = $update->getMessage();
 
-        // Check if admin
-        if ($telegramUser->id != env('TELE_ADMIN_ID')) {
+        // Check if user can add movies (admin or moderator)
+        $authService = app(TelegramAuthService::class);
+        if (!$authService->canAddMovies($telegramUser->id)) {
             $this->replyWithMessage([
-                'text' => "\u{274C} Command ini hanya untuk admin.",
+                'text' => "\u{274C} Command ini hanya untuk admin dan moderator.",
             ]);
             return;
         }

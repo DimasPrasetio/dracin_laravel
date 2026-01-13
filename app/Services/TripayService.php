@@ -6,11 +6,10 @@ use App\DataTransferObjects\PaymentData;
 use App\DataTransferObjects\TripayCallbackData;
 use App\DataTransferObjects\TripayPaymentResponse;
 use App\Events\PaymentCreated;
-use App\Events\PaymentExpired;
-use App\Events\PaymentFailed;
-use App\Events\PaymentPaid;
 use App\Exceptions\TripayException;
 use App\Repositories\PaymentRepository;
+use App\Services\PaymentStatusService;
+use App\Support\PaymentStatusCache;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -25,6 +24,7 @@ class TripayService
     public function __construct(
         private readonly PaymentRepository $paymentRepository,
         private readonly TripayCircuitBreaker $circuitBreaker,
+        private readonly PaymentStatusService $paymentStatusService,
     ) {
     }
 
@@ -68,6 +68,9 @@ class TripayService
             if (!$packageData) {
                 throw TripayException::invalidPackage($paymentData->package);
             }
+
+            // Use shared config default if not specified
+            $expiresInSeconds = $expiresInSeconds ?? (int) config('vip.payment.expiry_minutes', 60) * 60;
 
             $signature = $this->generateSignature(
                 $paymentData->merchantRef,
@@ -148,14 +151,8 @@ class TripayService
                 return true;
             }
 
-            // Update status
-            $this->paymentRepository->updateStatus($payment, $newStatus);
-
-            // Refresh model to get updated data
-            $payment->refresh();
-
-            // Dispatch appropriate event
-            $this->dispatchPaymentEvent($payment, $newStatus);
+            // Update status with transactional safeguards
+            $payment = $this->paymentStatusService->transition($payment, $newStatus);
 
             Log::info('Payment callback processed successfully', [
                 'payment_id' => $payment->id,
@@ -184,8 +181,17 @@ class TripayService
     /**
      * Check payment status from Tripay API
      */
-    public function checkPaymentStatus(string $reference): array
+    public function checkPaymentStatus(string $reference, bool $forceRefresh = false): array
     {
+        $cacheTtl = (int) config('vip.payment.status_cache_seconds', 20);
+
+        if (!$forceRefresh && $cacheTtl > 0) {
+            $cached = PaymentStatusCache::getByReference($reference);
+            if (!empty($cached)) {
+                return $cached;
+            }
+        }
+
         try {
             $this->validateConfiguration();
             $response = Http::withHeaders($this->getHeaders())
@@ -198,7 +204,15 @@ class TripayService
                 throw new \Exception($response->json('message', 'Failed to fetch payment status'));
             }
 
-            return $response->json('data', []);
+            $data = $response->json('data', []);
+            PaymentStatusCache::put(
+                $data ?? [],
+                $reference,
+                $data['merchant_ref'] ?? null,
+                $cacheTtl
+            );
+
+            return $data ?? [];
 
         } catch (\Exception $e) {
             Log::error('Failed to check payment status', [
@@ -215,7 +229,7 @@ class TripayService
      */
     public function getPackageDetails(string $package): ?array
     {
-        $packages = config('tripay.packages', []);
+        $packages = config('vip.packages', []);
         return $packages[$package] ?? null;
     }
 
@@ -224,7 +238,7 @@ class TripayService
      */
     public function getPackages(): array
     {
-        return config('tripay.packages', []);
+        return config('vip.packages', []);
     }
 
     /**
@@ -320,10 +334,9 @@ class TripayService
     /**
      * Build payment payload
      */
-    private function buildPaymentPayload(PaymentData $paymentData, string $signature, ?int $expiresInSeconds = null): array
+    private function buildPaymentPayload(PaymentData $paymentData, string $signature, int $expiresInSeconds): array
     {
         $packageData = $this->getPackageDetails($paymentData->package);
-        $expiresInSeconds = $expiresInSeconds ?? (24 * 60 * 60);
 
         return [
             'method' => $paymentData->paymentMethod,
@@ -375,19 +388,6 @@ class TripayService
     {
         $mode = config('tripay.mode', 'sandbox');
         return config('tripay.api_url')[$mode];
-    }
-
-    /**
-     * Dispatch appropriate payment event based on status
-     */
-    private function dispatchPaymentEvent($payment, string $status): void
-    {
-        match ($status) {
-            'paid' => event(new PaymentPaid($payment)),
-            'expired' => event(new PaymentExpired($payment)),
-            'cancelled' => event(new PaymentFailed($payment)),
-            default => null,
-        };
     }
 
     /**
@@ -478,4 +478,3 @@ class TripayService
         );
     }
 }
-
