@@ -254,6 +254,7 @@ class TelegramService
                 'video' => $fileId,
                 'caption' => $caption,
                 'parse_mode' => 'HTML',
+                'protect_content' => true,
             ]);
 
             return true;
@@ -297,6 +298,7 @@ class TelegramService
                     'photo' => $movie->thumbnail_file_id,
                     'caption' => $caption,
                     'parse_mode' => 'HTML',
+                    'protect_content' => true,
                 ]);
 
                 return $response->message_id;
@@ -311,6 +313,7 @@ class TelegramService
                     'document' => $movie->thumbnail_file_id,
                     'caption' => $caption,
                     'parse_mode' => 'HTML',
+                    'protect_content' => true,
                 ]);
 
                 return $response->message_id;
@@ -438,6 +441,7 @@ class TelegramService
                 'text' => $text,
                 'parse_mode' => 'HTML',
                 'reply_markup' => $replyMarkup,
+                'protect_content' => true,
             ]);
 
             return $response->message_id ?? null;
