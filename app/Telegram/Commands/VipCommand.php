@@ -2,13 +2,17 @@
 
 namespace App\Telegram\Commands;
 
-use App\Models\TelegramUser;
+use App\Models\Category;
+use App\Models\User;
 use App\Services\VipService;
+use App\Telegram\Commands\Traits\CategoryAware;
 use Telegram\Bot\Commands\Command;
 use Telegram\Bot\Keyboard\Keyboard;
 
 class VipCommand extends Command
 {
+    use CategoryAware;
+
     protected string $name = 'vip';
     protected string $description = 'Info paket VIP';
 
@@ -18,20 +22,36 @@ class VipCommand extends Command
         $telegramUser = $update->getMessage()->from;
 
         // Find or create user
-        $user = TelegramUser::findOrCreateFromTelegram($telegramUser);
+        $user = User::findOrCreateFromTelegram($telegramUser);
+        $category = $this->getCategory() ?? Category::getDefault();
 
-        if ($user->isVip()) {
+        // Check VIP status - per category if category is set
+        if ($category) {
+            if ($user->isVipForCategory($category->id)) {
+                $vipExpiry = $user->getVipExpiryForCategory($category->id);
+                $expiryText = $vipExpiry?->format('d M Y H:i') ?? 'N/A';
+
+                $this->replyWithMessage([
+                    'text' => "Anda sudah VIP untuk kategori <b>{$category->name}</b>\n\nBerlaku hingga: <b>{$expiryText}</b>",
+                    'parse_mode' => 'HTML',
+                ]);
+                return;
+            }
+        }
+
+        $vipService = app(VipService::class);
+        $packages = $vipService->getPackages($category?->id);
+
+        if (empty($packages)) {
             $this->replyWithMessage([
-                'text' => 'Anda sudah VIP dan akan expired pada ' . $user->vip_until->format('d M Y H:i'),
+                'text' => 'Paket VIP belum tersedia. Silakan hubungi admin.',
                 'parse_mode' => 'HTML',
             ]);
             return;
         }
 
-        $vipService = app(VipService::class);
-        $packages = $vipService->getPackages();
-
-        $message = "<b>Pilih paket VIP:</b>\n\n";
+        $categoryInfo = $category ? " untuk {$category->name}" : "";
+        $message = "<b>Pilih paket VIP{$categoryInfo}:</b>\n\n";
         foreach ($packages as $index => $package) {
             $no = $index + 1;
             $message .= "{$no}. {$package['label']}\n";

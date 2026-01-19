@@ -6,20 +6,26 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use App\Models\User;
-use App\Models\TelegramUser;
 
 class UserSeeder extends Seeder
 {
     /**
      * Run the database seeds.
      *
-     * This seeder creates default web admin and moderator users
-     * and automatically links them to their telegram accounts if available.
+     * This seeder creates default web admin and moderator users.
      */
     public function run(): void
     {
-        // Default web users
         $defaultUsers = [
+            [
+                'username' => 'superadmin',
+                'name' => 'Super Admin',
+                'phone' => null,
+                'email' => 'superadmin@yopmail.com',
+                'password' => 'superadmin123',
+                'role' => 'super_admin',
+                'telegram_id' => null,
+            ],
             [
                 'username' => 'admin',
                 'name' => 'Dimas Prasetio',
@@ -27,7 +33,7 @@ class UserSeeder extends Seeder
                 'email' => 'admin@yopmail.com',
                 'password' => 'admin123',
                 'role' => 'admin',
-                'telegram_user_id' => '1597383375', // Link to Dimas's telegram
+                'telegram_id' => 1597383375,
             ],
             [
                 'username' => 'moderator',
@@ -36,19 +42,21 @@ class UserSeeder extends Seeder
                 'email' => 'moderator@yopmail.com',
                 'password' => 'moderator123',
                 'role' => 'moderator',
-                'telegram_user_id' => '8190923723', // Link to Mahardika's telegram
+                'telegram_id' => 8190923723,
             ],
         ];
 
         foreach ($defaultUsers as $userData) {
-            $telegramUserId = $userData['telegram_user_id'];
-            unset($userData['telegram_user_id']);
-
-            // Check if user already exists
-            $user = User::where('email', $userData['email'])->first();
+            $user = User::query()
+                ->when(!empty($userData['telegram_id']), function ($query) use ($userData) {
+                    $query->where('telegram_id', $userData['telegram_id']);
+                })
+                ->when(!empty($userData['email']), function ($query) use ($userData) {
+                    $query->orWhere('email', $userData['email']);
+                })
+                ->first();
 
             if (!$user) {
-                // Create new user
                 $userData['password'] = Hash::make($userData['password']);
                 $user = User::create($userData);
 
@@ -59,42 +67,53 @@ class UserSeeder extends Seeder
                     'role' => $userData['role'],
                 ]);
             } else {
-                // Update existing user if role changed
+                $updates = [];
+
                 if ($user->role !== $userData['role']) {
+                    $updates['role'] = $userData['role'];
+                }
+
+                if (empty($user->email) && !empty($userData['email'])) {
+                    $updates['email'] = $userData['email'];
+                }
+
+                if (empty($user->username) && !empty($userData['username'])) {
+                    $updates['username'] = $userData['username'];
+                }
+
+                if (empty($user->name) && !empty($userData['name'])) {
+                    $updates['name'] = $userData['name'];
+                }
+
+                if (empty($user->phone) && !empty($userData['phone'])) {
+                    $updates['phone'] = $userData['phone'];
+                }
+
+                if (empty($user->telegram_id) && !empty($userData['telegram_id'])) {
+                    $updates['telegram_id'] = $userData['telegram_id'];
+                }
+
+                if (empty($user->password) && !empty($userData['password'])) {
+                    $updates['password'] = Hash::make($userData['password']);
+                }
+
+                if (!empty($updates)) {
                     $oldRole = $user->role;
-                    $user->update(['role' => $userData['role']]);
+                    $user->update($updates);
 
-                    $this->command->info("Updated {$userData['name']}'s role from {$oldRole} to {$userData['role']}");
-                    Log::info('UserSeeder: Updated existing user role', [
-                        'user_id' => $user->id,
-                        'old_role' => $oldRole,
-                        'new_role' => $userData['role'],
-                    ]);
+                    if (isset($updates['role'])) {
+                        $this->command->info("Updated {$userData['name']}'s role from {$oldRole} to {$userData['role']}");
+                        Log::info('UserSeeder: Updated existing user role', [
+                            'user_id' => $user->id,
+                            'old_role' => $oldRole,
+                            'new_role' => $userData['role'],
+                        ]);
+                    } else {
+                        $this->command->info("Updated {$userData['name']} ({$userData['email']})");
+                    }
                 } else {
-                    $this->command->info("{$userData['name']} ({$userData['email']}) already exists as {$userData['role']}");
+                    $this->command->info("{$userData['name']} ({$userData['email']}) already exists");
                 }
-            }
-
-            // Link to telegram user if exists
-            $telegramUser = TelegramUser::where('telegram_user_id', $telegramUserId)->first();
-
-            if ($telegramUser) {
-                // Check if already linked
-                if ($telegramUser->linked_user_id !== $user->id) {
-                    $telegramUser->linkToUser($user);
-
-                    $this->command->info("  → Linked to Telegram user: {$telegramUser->full_name} (ID: {$telegramUserId})");
-                    Log::info('UserSeeder: Linked web user to telegram user', [
-                        'user_id' => $user->id,
-                        'telegram_user_id' => $telegramUserId,
-                    ]);
-
-                    // The UserObserver will automatically sync the role to telegram user
-                } else {
-                    $this->command->info("  → Already linked to Telegram user: {$telegramUser->full_name}");
-                }
-            } else {
-                $this->command->warn("  ⚠ Telegram user {$telegramUserId} not found. Run TelegramAdminSeeder first!");
             }
         }
 

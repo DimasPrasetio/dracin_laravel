@@ -102,19 +102,25 @@
                             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
                                     <div>
-                                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 1</p>
                                         <h4 class="text-base font-semibold text-gray-900">Informasi Dasar Film</h4>
-                                        <p class="text-xs text-gray-500">Isi seperlunya lalu lanjut unggah.</p>
                                     </div>
-                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 6h18M3 18h18"></path>
-                                        </svg>
-                                        Detail
-                                    </span>
                                 </div>
                                 <div class="p-4 sm:p-5">
                                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div>
+                                            <label class="block text-sm font-semibold text-gray-700 mb-2">Kategori <span class="text-red-500">*</span></label>
+                                            <select id="categoryId" name="category_id" required class="w-full px-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" {{ $categories->isEmpty() ? 'disabled' : '' }}>
+                                                <option value="" disabled selected>Pilih kategori</option>
+                                                @foreach($categories as $category)
+                                                    <option value="{{ $category->id }}">{{ $category->name }}</option>
+                                                @endforeach
+                                            </select>
+                                            @if($categories->isEmpty())
+                                                <p class="mt-2 text-xs text-red-500">Tidak ada kategori yang bisa diakses.</p>
+                                            @else
+                                                <p class="mt-2 text-xs text-gray-500">Wajib pilih kategori.</p>
+                                            @endif
+                                        </div>
                                         <div>
                                             <label class="block text-sm font-semibold text-gray-700 mb-2">Judul Film <span class="text-red-500">*</span></label>
                                             <div class="relative">
@@ -127,7 +133,6 @@
                                                 </div>
                                                 <input type="text" id="title" name="title" required class="w-full pl-14 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
                                             </div>
-                                            <p class="mt-2 text-xs text-gray-500">Judul ini akan tampil di channel dan riwayat transaksi.</p>
                                         </div>
                                         <div id="totalPartsField" class="rounded-2xl border border-gray-200 bg-gray-50 p-4">
                                             <div class="flex items-center justify-between">
@@ -147,7 +152,6 @@
                                                     </svg>
                                                 </button>
                                             </div>
-                                            <p class="mt-2 text-xs text-gray-500">Sistem akan membuat kolom unggah sesuai angka ini.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -156,15 +160,8 @@
                             <div id="thumbnailField" class="rounded-2xl border border-gray-200 bg-white shadow-sm">
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
                                     <div>
-                                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 2</p>
                                         <h4 class="text-base font-semibold text-gray-900">Poster / Thumbnail Film</h4>
                                     </div>
-                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
-                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4-4-4-4m8 8l4-4-4-4m8 8l4-4-4-4"></path>
-                                        </svg>
-                                        Step 2
-                                    </span>
                                 </div>
                                 <div class="p-4 sm:p-5">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -181,7 +178,7 @@
                                             </div>
                                             <div>
                                                 <p class="text-sm font-semibold text-gray-800">Tarik file atau klik untuk unggah</p>
-                                                <p class="text-xs text-gray-500">Format JPG/PNG, minimal 1080px, maksimal 10MB</p>
+                                                <p class="text-xs text-gray-500">JPG/PNG, maksimal 10MB</p>
                                             </div>
                                         </div>
                                         <div id="thumbnailPreview" class="hidden flex flex-col items-center gap-3 pointer-events-none">
@@ -190,19 +187,15 @@
                                                 <p id="thumbnailFileName" class="text-sm font-semibold text-gray-800"></p>
                                                 <p id="thumbnailFileMeta" class="text-xs text-gray-500"></p>
                                             </div>
-                                            <p class="text-xs text-gray-500">Klik ulang area ini untuk mengganti thumbnail.</p>
                                         </div>
                                     </div>
-                                    <p class="mt-3 text-xs text-gray-500">Rasio ideal 16:9, gunakan poster tajam karena gambar ini juga dipakai ketika broadcast ke user VIP.</p>
                                 </div>
                             </div>
 
                             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
                                     <div>
-                                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 3</p>
                                         <h4 class="text-base font-semibold text-gray-900">Penjadwalan Part & File Video</h4>
-                                        <p class="text-xs text-gray-500">Seret file ke part masing-masing atau klik area unggah.</p>
                                     </div>
                                     <span id="partsCounter" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
                                         0 part disiapkan
@@ -461,6 +454,7 @@ $(document).ready(function() {
         $('#modalTitle').text('Tambah Film');
         $('#movieId').val('');
         $('#isEdit').val('0');
+        $('#categoryId').val('');
         $('#title').val('');
         $('#totalParts').val('1');
         $('#thumbnail').val('');
@@ -755,6 +749,13 @@ $(document).ready(function() {
         const totalParts = parseInt($('#totalParts').val());
         if (!totalParts || totalParts < 1) {
             showError('Jumlah part minimal 1');
+            return;
+        }
+
+        // Check if category is selected for new movies
+        const categoryId = $('#categoryId').val();
+        if (!isEdit && !categoryId) {
+            showError('Pilih kategori terlebih dahulu');
             return;
         }
 

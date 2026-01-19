@@ -40,11 +40,7 @@ class VideoPart extends Model
      */
     public static function generateVideoId(): string
     {
-        do {
-            $videoId = 'MKV' . strtoupper(substr(md5(uniqid(mt_rand(), true)), 0, 14)) . '_' . rand(10000, 99999);
-        } while (self::where('video_id', $videoId)->exists());
-
-        return $videoId;
+        return 'MKV' . Str::upper(Str::uuid()->toString());
     }
 
     /**
@@ -52,7 +48,9 @@ class VideoPart extends Model
      */
     public function getDeepLinkAttribute(): string
     {
-        $botUsername = config('telegram.bots.default.username');
+        $botUsername = $this->movie?->category?->bot_username
+            ?? config('telegram.bots.default.username');
+        $botUsername = ltrim((string) $botUsername, '@');
         return "https://t.me/{$botUsername}?start={$this->video_id}";
     }
 }

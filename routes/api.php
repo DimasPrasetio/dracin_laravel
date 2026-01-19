@@ -17,12 +17,30 @@ use App\Http\Controllers\CheckoutController;
 
 // Telegram Webhook Routes
 Route::prefix('telegram')->group(function () {
-    // Main webhook endpoint
+    // Main webhook endpoint (default bot - backward compatible)
     Route::post('/webhook', [TelegramWebhookController::class, 'handle'])
         ->middleware('throttle:bot-webhook')
         ->name('telegram.webhook');
 
-    // Health check endpoint
+    // Health check endpoint (default bot)
     Route::get('/webhook/health', [TelegramWebhookController::class, 'health'])
         ->name('telegram.webhook.health');
+
+    // Category-specific webhook endpoints
+    Route::post('/webhook/{categorySlug}', [TelegramWebhookController::class, 'handleCategory'])
+        ->middleware('throttle:bot-webhook')
+        ->name('telegram.webhook.category');
+
+    // Category-specific health check endpoint
+    Route::get('/webhook/{categorySlug}/health', [TelegramWebhookController::class, 'healthCategory'])
+        ->name('telegram.webhook.category.health');
+
+    // Webhook management endpoints (protected - for admin use)
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('/webhook/{categorySlug}/set', [TelegramWebhookController::class, 'setWebhook'])
+            ->name('telegram.webhook.category.set');
+
+        Route::delete('/webhook/{categorySlug}/delete', [TelegramWebhookController::class, 'deleteWebhook'])
+            ->name('telegram.webhook.category.delete');
+    });
 });

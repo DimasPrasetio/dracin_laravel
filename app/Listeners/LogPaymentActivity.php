@@ -17,7 +17,7 @@ class LogPaymentActivity
             'reference' => $event->payment->tripay_reference,
             'amount' => $event->payment->amount,
             'package' => $event->payment->package,
-            'telegram_user_id' => $event->payment->telegramUser->telegram_user_id,
+            'telegram_id' => $event->payment->user?->telegram_id,
             'payment_method' => $event->payment->payment_method,
         ]);
     }
@@ -28,7 +28,7 @@ class LogPaymentActivity
             'payment_id' => $event->payment->id,
             'reference' => $event->payment->tripay_reference,
             'amount' => $event->payment->amount,
-            'telegram_user_id' => $event->payment->telegramUser->telegram_user_id,
+            'telegram_id' => $event->payment->user?->telegram_id,
         ]);
     }
 
@@ -38,7 +38,7 @@ class LogPaymentActivity
             'payment_id' => $event->payment->id,
             'reference' => $event->payment->tripay_reference,
             'amount' => $event->payment->amount,
-            'telegram_user_id' => $event->payment->telegramUser->telegram_user_id,
+            'telegram_id' => $event->payment->user?->telegram_id,
         ]);
     }
 
@@ -48,7 +48,7 @@ class LogPaymentActivity
             'payment_id' => $event->payment->id,
             'reference' => $event->payment->tripay_reference,
             'amount' => $event->payment->amount,
-            'telegram_user_id' => $event->payment->telegramUser->telegram_user_id,
+            'telegram_id' => $event->payment->user?->telegram_id,
         ]);
     }
 }

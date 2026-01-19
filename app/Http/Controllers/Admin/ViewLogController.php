@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
+use App\Models\User;
 use App\Models\ViewLog;
 use App\Models\Movie;
 use App\Models\VideoPart;
@@ -17,7 +19,16 @@ class ViewLogController extends Controller
      */
     public function index()
     {
-        return view('admin.view-logs.index');
+        $user = auth()->user();
+        $categories = $user ? $user->getAccessibleCategories() : collect();
+        $movies = Movie::query()
+            ->when($user && !$user->isSuperAdmin(), function ($query) use ($categories) {
+                $query->whereIn('category_id', $categories->pluck('id'));
+            })
+            ->orderBy('title')
+            ->get();
+
+        return view('admin.view-logs.index', compact('categories', 'movies'));
     }
 
     /**
@@ -29,7 +40,36 @@ class ViewLogController extends Controller
             'period' => 'nullable|string|in:today,week,month,year,all',
             'movie_id' => 'nullable|integer|exists:movies,id',
             'is_vip' => 'nullable|boolean',
+            'category_id' => 'nullable',
         ]);
+
+        $user = $request->user();
+        $categories = $user ? $user->getAccessibleCategories() : collect();
+        $accessibleCategoryIds = $categories->pluck('id');
+        $selectedCategoryId = $request->input('category_id');
+
+        if ($user && !$user->isSuperAdmin()) {
+            if (!$selectedCategoryId) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kategori wajib dipilih.',
+                ], 422);
+            }
+
+            if (!$accessibleCategoryIds->contains((int) $selectedCategoryId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses ke kategori ini.',
+                ], 403);
+            }
+        } elseif ($selectedCategoryId && $selectedCategoryId !== 'all') {
+            if (!Category::whereKey($selectedCategoryId)->exists()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Kategori tidak ditemukan.',
+                ], 422);
+            }
+        }
 
         $period = $request->input('period', 'week');
         $movieId = $request->input('movie_id');
@@ -41,8 +81,27 @@ class ViewLogController extends Controller
         // Apply period filter
         $query = $this->applyPeriodFilter($query, $period);
 
+        if ($selectedCategoryId && $selectedCategoryId !== 'all') {
+            $query->where('category_id', $selectedCategoryId);
+        } elseif ($user && !$user->isSuperAdmin()) {
+            $query->whereIn('category_id', $accessibleCategoryIds);
+        }
+
         // Apply movie filter
         if ($movieId) {
+            if ($user && !$user->isSuperAdmin()) {
+                $movieInAccess = Movie::whereKey($movieId)
+                    ->whereIn('category_id', $accessibleCategoryIds)
+                    ->exists();
+
+                if (!$movieInAccess) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Anda tidak memiliki akses ke film ini.',
+                    ], 403);
+                }
+            }
+
             $query->whereHas('videoPart', function ($q) use ($movieId) {
                 $q->where('movie_id', $movieId);
             });
@@ -58,7 +117,7 @@ class ViewLogController extends Controller
             'total_views' => (clone $query)->count(),
             'vip_views' => (clone $query)->where('is_vip', true)->count(),
             'free_views' => (clone $query)->where('is_vip', false)->count(),
-            'unique_users' => (clone $query)->distinct('telegram_user_id')->count('telegram_user_id'),
+            'unique_users' => (clone $query)->distinct('user_id')->count('user_id'),
         ];
 
         // Get top movies
@@ -94,15 +153,46 @@ class ViewLogController extends Controller
      */
     public function data(Request $request)
     {
-        $query = ViewLog::with(['telegramUser', 'videoPart.movie'])
+        $request->validate([
+            'category_id' => 'nullable',
+        ]);
+
+        $user = $request->user();
+        $categories = $user ? $user->getAccessibleCategories() : collect();
+        $accessibleCategoryIds = $categories->pluck('id');
+        $selectedCategoryId = $request->input('category_id');
+
+        if ($user && !$user->isSuperAdmin()) {
+            if (!$selectedCategoryId) {
+                return response()->json([
+                    'message' => 'Kategori wajib dipilih.',
+                ], 422);
+            }
+
+            if (!$accessibleCategoryIds->contains((int) $selectedCategoryId)) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki akses ke kategori ini.',
+                ], 403);
+            }
+        } elseif ($selectedCategoryId && $selectedCategoryId !== 'all') {
+            if (!Category::whereKey($selectedCategoryId)->exists()) {
+                return response()->json([
+                    'message' => 'Kategori tidak ditemukan.',
+                ], 422);
+            }
+        }
+
+        $query = ViewLog::with(['user', 'videoPart.movie', 'category'])
             ->orderBy('created_at', 'desc');
 
         // Search
         if ($search = $request->input('search.value')) {
             $query->where(function ($q) use ($search) {
-                $q->whereHas('telegramUser', function ($q2) use ($search) {
+                $q->whereHas('user', function ($q2) use ($search) {
                     $q2->where('username', 'like', "%{$search}%")
-                       ->orWhere('first_name', 'like', "%{$search}%");
+                       ->orWhere('first_name', 'like', "%{$search}%")
+                       ->orWhere('last_name', 'like', "%{$search}%")
+                       ->orWhere('name', 'like', "%{$search}%");
                 })
                 ->orWhereHas('videoPart.movie', function ($q2) use ($search) {
                     $q2->where('title', 'like', "%{$search}%");
@@ -123,6 +213,12 @@ class ViewLogController extends Controller
             $query->where('is_vip', $request->input('is_vip'));
         }
 
+        if ($selectedCategoryId && $selectedCategoryId !== 'all') {
+            $query->where('category_id', $selectedCategoryId);
+        } elseif ($user && !$user->isSuperAdmin()) {
+            $query->whereIn('category_id', $accessibleCategoryIds);
+        }
+
         $totalData = $query->count();
         $totalFiltered = $totalData;
 
@@ -134,11 +230,18 @@ class ViewLogController extends Controller
         $data = $logs->map(function ($log) {
             return [
                 'id' => $log->id,
-                'user' => $log->telegramUser ? [
-                    'id' => $log->telegramUser->telegram_user_id,
-                    'username' => $log->telegramUser->username,
-                    'name' => $log->telegramUser->full_name,
+                'user' => $log->user ? [
+                    'id' => $log->user->telegram_id ?? $log->user->id,
+                    'username' => $log->user->username,
+                    'name' => $log->user->display_name,
                 ] : null,
+                'category' => $log->category ? [
+                    'id' => $log->category->id,
+                    'name' => $log->category->name,
+                ] : ($log->videoPart && $log->videoPart->movie && $log->videoPart->movie->category ? [
+                    'id' => $log->videoPart->movie->category->id,
+                    'name' => $log->videoPart->movie->category->name,
+                ] : null),
                 'movie' => $log->videoPart && $log->videoPart->movie ? [
                     'id' => $log->videoPart->movie->id,
                     'title' => $log->videoPart->movie->title,
@@ -165,8 +268,36 @@ class ViewLogController extends Controller
      */
     public function userHistory(Request $request, int $telegramUserId)
     {
+        $user = $request->user();
+        $categories = $user ? $user->getAccessibleCategories() : collect();
+        $accessibleCategoryIds = $categories->pluck('id');
+        $selectedCategoryId = $request->input('category_id');
+
+        if ($user && !$user->isSuperAdmin()) {
+            if (!$selectedCategoryId || !$accessibleCategoryIds->contains((int) $selectedCategoryId)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses ke kategori ini.',
+                ], 403);
+            }
+        }
+
+        $user = User::findByTelegramId($telegramUserId);
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User tidak ditemukan.',
+            ], 404);
+        }
+
         $logs = ViewLog::with(['videoPart.movie'])
-            ->where('telegram_user_id', $telegramUserId)
+            ->where('user_id', $user->id)
+            ->when($selectedCategoryId && $selectedCategoryId !== 'all', function ($query) use ($selectedCategoryId) {
+                $query->where('category_id', $selectedCategoryId);
+            })
+            ->when($user && !$user->isSuperAdmin(), function ($query) use ($accessibleCategoryIds) {
+                $query->whereIn('category_id', $accessibleCategoryIds);
+            })
             ->orderBy('created_at', 'desc')
             ->limit(50)
             ->get();
@@ -194,14 +325,16 @@ class ViewLogController extends Controller
      */
     private function applyPeriodFilter($query, string $period)
     {
+        $column = 'view_logs.created_at';
+
         return match ($period) {
-            'today' => $query->whereDate('created_at', today()),
-            'week' => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
-            'month' => $query->whereMonth('created_at', now()->month)
-                             ->whereYear('created_at', now()->year),
-            'year' => $query->whereYear('created_at', now()->year),
+            'today' => $query->whereDate($column, today()),
+            'week' => $query->whereBetween($column, [now()->startOfWeek(), now()->endOfWeek()]),
+            'month' => $query->whereMonth($column, now()->month)
+                             ->whereYear($column, now()->year),
+            'year' => $query->whereYear($column, now()->year),
             'all' => $query,
-            default => $query->whereBetween('created_at', [now()->startOfWeek(), now()->endOfWeek()]),
+            default => $query->whereBetween($column, [now()->startOfWeek(), now()->endOfWeek()]),
         };
     }
 
@@ -210,6 +343,7 @@ class ViewLogController extends Controller
      */
     private function getViewsTimeline($query, string $period)
     {
+        $column = 'view_logs.created_at';
         $format = match ($period) {
             'today' => '%H:00',
             'week', 'month' => '%Y-%m-%d',
@@ -219,7 +353,7 @@ class ViewLogController extends Controller
 
         $timeline = (clone $query)
             ->select(
-                DB::raw("DATE_FORMAT(created_at, '{$format}') as date"),
+                DB::raw("DATE_FORMAT({$column}, '{$format}') as date"),
                 DB::raw('COUNT(*) as views'),
                 DB::raw('SUM(CASE WHEN is_vip = 1 THEN 1 ELSE 0 END) as vip_views'),
                 DB::raw('SUM(CASE WHEN is_vip = 0 THEN 1 ELSE 0 END) as free_views')

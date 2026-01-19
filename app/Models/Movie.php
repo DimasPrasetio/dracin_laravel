@@ -10,6 +10,7 @@ class Movie extends Model
     use HasFactory;
 
     protected $fillable = [
+        'category_id',
         'title',
         'thumbnail_file_id',
         'channel_message_id',
@@ -21,6 +22,14 @@ class Movie extends Model
         'total_parts' => 'integer',
         'channel_message_id' => 'integer',
     ];
+
+    /**
+     * Category relationship
+     */
+    public function category()
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     /**
      * Video parts relationship

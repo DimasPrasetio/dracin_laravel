@@ -7,8 +7,9 @@ use App\DataTransferObjects\TripayCallbackData;
 use App\Exceptions\TripayException;
 use App\Http\Requests\CheckoutRequest;
 use App\Http\Requests\TripayCallbackRequest;
+use App\Models\Category;
 use App\Models\Payment;
-use App\Models\TelegramUser;
+use App\Models\User;
 use App\Repositories\PaymentRepository;
 use App\Services\PaymentStatusService;
 use App\Services\TripayService;
@@ -30,7 +31,8 @@ class CheckoutController extends Controller
      */
     public function index()
     {
-        $packages = $this->tripayService->getPackages();
+        $category = Category::getDefault();
+        $packages = $this->tripayService->getPackages($category?->id);
         $paymentStatus = $this->tripayService->isAvailable();
         return view('frontend.landing', compact('packages', 'paymentStatus'));
     }
@@ -40,16 +42,19 @@ class CheckoutController extends Controller
      */
     public function checkout(Request $request)
     {
+        $category = Category::getDefault();
+        $packageCodes = app(\App\Services\VipService::class)->getPackageCodes($category?->id);
+
         $request->validate([
             'package' => [
                 'required',
                 'string',
-                Rule::in(array_keys(config('vip.packages', []))),
+                Rule::in($packageCodes),
             ],
         ]);
 
         $package = $request->input('package');
-        $packageData = $this->tripayService->getPackageDetails($package);
+        $packageData = $this->tripayService->getPackageDetails($package, $category?->id);
 
         if (!$packageData) {
             return redirect()->route('landing')
@@ -140,20 +145,22 @@ class CheckoutController extends Controller
     {
         try {
             return DB::transaction(function () use ($request) {
-                // Find or create telegram user
-                $telegramUser = $this->findOrCreateTelegramUser($request->validated());
+                // Find or create user from Telegram details
+                $user = $this->findOrCreateUser($request->validated());
+                $category = Category::getDefault();
 
-                // Check if user is already VIP - prevent duplicate purchase
-                if ($telegramUser->isVip()) {
+                if ($category && $user->isVipForCategory($category->id)) {
+                    $vipUntil = $user->getVipExpiryForCategory($category->id);
+                    $expiryText = $vipUntil?->format('d M Y H:i') ?? 'N/A';
                     return redirect()->back()
                         ->with('error', 'Anda masih dalam layanan VIP sampai ' .
-                               $telegramUser->vip_until->format('d M Y H:i') .
+                               $expiryText .
                                '. Pembelian baru dapat dilakukan setelah VIP expired.')
                         ->withInput();
                 }
 
                 // Get package details
-                $packageData = $this->tripayService->getPackageDetails($request->package);
+                $packageData = $this->tripayService->getPackageDetails($request->package, $category?->id);
 
                 if (!$packageData) {
                     throw TripayException::invalidPackage($request->package);
@@ -161,9 +168,11 @@ class CheckoutController extends Controller
 
                 // Reuse pending payment if available to avoid duplicates
                 $existingPayment = $this->paymentRepository->findReusablePayment(
-                    $telegramUser->id,
+                    $user->id,
                     $request->package,
-                    $request->payment_method
+                    $request->payment_method,
+                    $category?->id,
+                    (int) ($packageData['price'] ?? 0)
                 );
 
                 if ($existingPayment && $existingPayment->tripay_reference) {
@@ -174,9 +183,12 @@ class CheckoutController extends Controller
 
                 // Create payment data DTO
                 $paymentData = PaymentData::fromRequest(
-                    $request->validated(),
-                    $telegramUser,
-                    $packageData['price']
+                    array_merge($request->validated(), [
+                        'category_id' => $category?->id,
+                    ]),
+                    $user,
+                    (int) ($packageData['price'] ?? 0),
+                    $packageData
                 );
 
                 // Create payment via Tripay
@@ -197,7 +209,7 @@ class CheckoutController extends Controller
         } catch (TripayException $e) {
             Log::error('Checkout process failed with Tripay exception', [
                 'error' => $e->getMessage(),
-                'telegram_user_id' => $request->telegram_user_id,
+                'telegram_id' => $request->telegram_user_id,
             ]);
 
             return redirect()->back()
@@ -284,7 +296,7 @@ class CheckoutController extends Controller
             return response()->json([
                 'success' => true,
                 'status' => $payment->status,
-                'payment' => $payment->load('telegramUser'),
+                'payment' => $payment->load('user'),
             ]);
 
         } catch (\Exception $e) {
@@ -372,31 +384,37 @@ class CheckoutController extends Controller
     /**
      * Find or create telegram user
      */
-    private function findOrCreateTelegramUser(array $data): TelegramUser
+    private function findOrCreateUser(array $data): User
     {
-        $telegramUser = TelegramUser::where('telegram_user_id', $data['telegram_user_id'])->first();
+        $telegramId = (int) $data['telegram_user_id'];
 
-        if (!$telegramUser) {
-            $telegramUser = TelegramUser::create([
-                'telegram_user_id' => $data['telegram_user_id'],
+        $user = User::where('telegram_id', $telegramId)->first();
+
+        if (!$user) {
+            $user = User::create([
+                'telegram_id' => $telegramId,
                 'username' => $data['username'] ?? null,
                 'first_name' => $data['first_name'],
                 'last_name' => $data['last_name'] ?? null,
+                'name' => trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''))
+                    ?: ($data['username'] ?? 'User ' . $telegramId),
+                'role' => User::ROLE_USER,
             ]);
 
             Log::info('New Telegram user created during checkout', [
-                'telegram_user_id' => $data['telegram_user_id'],
+                'telegram_id' => $telegramId,
             ]);
         } else {
-            // Update user data
-            $telegramUser->update([
-                'username' => $data['username'] ?? $telegramUser->username,
+            $user->update([
+                'username' => $data['username'] ?? $user->username,
                 'first_name' => $data['first_name'],
-                'last_name' => $data['last_name'] ?? $telegramUser->last_name,
+                'last_name' => $data['last_name'] ?? $user->last_name,
+                'name' => trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? ''))
+                    ?: ($data['username'] ?? $user->name),
             ]);
         }
 
-        return $telegramUser;
+        return $user;
     }
 
     /**
@@ -430,13 +448,15 @@ class CheckoutController extends Controller
             'telegram_user_id' => 'required|numeric|digits_between:1,20',
         ]);
 
-        $telegramUser = TelegramUser::where('telegram_user_id', $request->telegram_user_id)->first();
+        $user = User::where('telegram_id', $request->telegram_user_id)->first();
+        $category = Category::getDefault();
 
-        if ($telegramUser && $telegramUser->isVip()) {
+        if ($user && $category && $user->isVipForCategory($category->id)) {
+            $vipUntil = $user->getVipExpiryForCategory($category->id);
             return response()->json([
                 'is_vip' => true,
-                'vip_until' => $telegramUser->vip_until->format('d M Y H:i'),
-                'message' => 'Anda masih dalam layanan VIP sampai ' . $telegramUser->vip_until->format('d M Y H:i'),
+                'vip_until' => $vipUntil?->format('d M Y H:i'),
+                'message' => 'Anda masih dalam layanan VIP sampai ' . ($vipUntil?->format('d M Y H:i') ?? 'N/A'),
             ]);
         }
 

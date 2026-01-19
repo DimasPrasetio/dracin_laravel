@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Category;
+use App\Services\VipService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -14,11 +16,14 @@ class CheckoutRequest extends FormRequest
 
     public function rules(): array
     {
+        $categoryId = Category::getDefault()?->id;
+        $packageCodes = app(VipService::class)->getPackageCodes($categoryId);
+
         return [
             'package' => [
                 'required',
                 'string',
-                Rule::in(array_keys(config('vip.packages', []))),
+                Rule::in($packageCodes),
             ],
             'telegram_user_id' => [
                 'required',

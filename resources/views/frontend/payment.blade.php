@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pembayaran - Dracin HD</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -78,6 +79,15 @@
     </header>
 
     <div class="max-w-4xl mx-auto px-4 py-12">
+        @php
+            $vipUntil = null;
+            $vipCategoryId = $payment->category_id ?? \App\Models\Category::getDefault()?->id;
+            if ($payment->user && $vipCategoryId) {
+                $vipUntil = $payment->user->vipSubscriptions()
+                    ->where('category_id', $vipCategoryId)
+                    ->value('vip_until');
+            }
+        @endphp
         @if($payment->status === 'paid')
             <!-- Payment Success -->
             <div class="card-dark rounded-lg p-8 text-center glow-success">
@@ -94,20 +104,20 @@
                     <div class="space-y-2 text-left max-w-md mx-auto">
                         <div class="flex justify-between">
                             <span class="text-secondary">Paket:</span>
-                            <span class="font-medium">{{ $payment->package }}</span>
+                            <span class="font-medium">{{ $payment->package_name ?? $payment->package }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-secondary">Telegram User ID:</span>
-                            <span class="font-medium">{{ $payment->telegramUser->telegram_user_id }}</span>
+                            <span class="font-medium">{{ $payment->user?->telegram_id ?? '-' }}</span>
                         </div>
                         <div class="flex justify-between">
                             <span class="text-secondary">Status VIP:</span>
                             <span class="font-medium text-green-400">Aktif</span>
                         </div>
-                        @if($payment->telegramUser->vip_until)
+                        @if($vipUntil)
                         <div class="flex justify-between">
                             <span class="text-secondary">Berlaku Hingga:</span>
-                            <span class="font-medium">{{ \Carbon\Carbon::parse($payment->telegramUser->vip_until)->format('d M Y H:i') }}</span>
+                            <span class="font-medium">{{ \Carbon\Carbon::parse($vipUntil)->format('d M Y H:i') }}</span>
                         </div>
                         @endif
                     </div>
@@ -236,20 +246,21 @@
                         <div class="space-y-3 mb-6 text-sm">
                             <div class="flex justify-between">
                                 <span class="text-secondary">Paket:</span>
-                                <span class="font-medium">{{ $payment->package }}</span>
+                                <span class="font-medium">{{ $payment->package_name ?? $payment->package }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-secondary">Nama:</span>
-                                <span class="font-medium">{{ $payment->telegramUser->full_name }}</span>
+                                <span class="font-medium">{{ $payment->user?->display_name ?? '-' }}</span>
                             </div>
                             <div class="flex justify-between">
                                 <span class="text-secondary">Telegram ID:</span>
-                                <span class="font-medium">{{ $payment->telegramUser->telegram_user_id }}</span>
+                                <span class="font-medium">{{ $payment->user?->telegram_id ?? '-' }}</span>
                             </div>
                         </div>
 
                         @php
-                            $packagePrice = \App\Models\Payment::getPackagePrice($payment->package);
+                            $packagePrice = $payment->package_price
+                                ?? \App\Models\Payment::getPackagePrice($payment->package, $payment->category_id);
                             $feeAmount = $payment->amount - $packagePrice;
                         @endphp
 
@@ -347,6 +358,16 @@
         function copyVA() {
             const vaNumber = document.getElementById('va-number').textContent;
             navigator.clipboard.writeText(vaNumber).then(function() {
+                if (window.Swal) {
+                    window.Swal.fire({
+                        icon: 'success',
+                        title: 'Berhasil',
+                        text: 'Nomor Virtual Account berhasil disalin!',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    return;
+                }
                 alert('Nomor Virtual Account berhasil disalin!');
             });
         }

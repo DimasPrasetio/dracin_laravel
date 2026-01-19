@@ -30,7 +30,7 @@ class TelegramPollingCommand extends Command
 
         $timeout = (int) $this->option('timeout');
 
-        $this->info("🤖 Starting Telegram Bot Polling...");
+        $this->info(" Starting Telegram Bot Polling...");
         $this->info('Bot: ' . config('telegram.bots.default.username'));
         $this->info('Press Ctrl+C to stop');
         $this->newLine();
@@ -38,9 +38,9 @@ class TelegramPollingCommand extends Command
         // Disable push updates to ensure polling mode
         try {
             Telegram::removeWebhook();
-            $this->info("✅ Polling mode aktif, siap menerima update");
+            $this->info(" Polling mode aktif, siap menerima update");
         } catch (\Exception $e) {
-            $this->warn("⚠️ Gagal mengaktifkan polling: " . $e->getMessage());
+            $this->warn(" Gagal mengaktifkan polling: " . $e->getMessage());
         }
 
         $this->newLine();
@@ -54,7 +54,7 @@ class TelegramPollingCommand extends Command
                 $memoryUsage = memory_get_usage(true);
                 if ($memoryUsage > 104857600) { // 100MB in bytes
                     $memoryMB = round($memoryUsage / 1048576, 2);
-                    $this->warn("⚠️ Memory limit reached: {$memoryMB}MB. Restarting...");
+                    $this->warn(" Memory limit reached: {$memoryMB}MB. Restarting...");
                     Log::warning('Polling command restarting due to memory limit', [
                         'memory_usage' => $memoryMB . 'MB'
                     ]);
@@ -74,18 +74,18 @@ class TelegramPollingCommand extends Command
 
                 // Show heartbeat or update count
                 if (count($updates) > 0) {
-                    $this->info("💓 Processed " . count($updates) . ' update(s) - Last ID: ' . $this->lastUpdateId);
+                    $this->info(" Processed " . count($updates) . ' update(s) - Last ID: ' . $this->lastUpdateId);
                     $lastHeartbeat = time(); // Reset heartbeat timer on activity
                 } else {
                     // Show heartbeat if no updates for a while
                     if (time() - $lastHeartbeat >= $heartbeatInterval) {
                         $memoryMB = round(memory_get_usage(true) / 1048576, 2);
-                        $this->line("💓 Heartbeat - Waiting for updates... (Memory: {$memoryMB}MB)");
+                        $this->line(" Heartbeat - Waiting for updates... (Memory: {$memoryMB}MB)");
                         $lastHeartbeat = time();
                     }
                 }
             } catch (\Exception $e) {
-                $this->error("❌ Error: " . $e->getMessage());
+                $this->error(" Error: " . $e->getMessage());
                 Log::error('Telegram Polling Error: ' . $e->getMessage());
 
                 // Wait before retrying
@@ -103,7 +103,7 @@ class TelegramPollingCommand extends Command
             if ($update->getMessage() && isset($update->getMessage()->text)) {
                 $text = $update->getMessage()->text;
                 if (str_starts_with($text, '/')) {
-                    $this->line("✅ Command received: {$text}");
+                    $this->line(" Command received: {$text}");
                 }
             }
 
@@ -111,7 +111,8 @@ class TelegramPollingCommand extends Command
             $this->updateProcessor->processUpdate($update);
         } catch (\Exception $e) {
             Log::error('Update processing error: ' . $e->getMessage());
-            $this->error("⚠️ Failed to process update: " . $e->getMessage());
+            $this->error(" Failed to process update: " . $e->getMessage());
         }
     }
 }
+

@@ -3,15 +3,18 @@
 namespace App\Services;
 
 use App\DataTransferObjects\PaymentData;
+use App\Jobs\ClearChatHistory;
 use App\Exceptions\TripayException;
 use App\Models\BotState;
-use App\Models\TelegramUser;
+use App\Models\Category;
+use App\Models\User;
 use App\Repositories\PaymentRepository;
 use App\Services\TripayService;
 use chillerlan\QRCode\QRCode;
 use chillerlan\QRCode\QROptions;
 use chillerlan\QRCode\Output\QROutputInterface;
 use Illuminate\Support\Facades\Log;
+use Telegram\Bot\Api;
 use Telegram\Bot\FileUpload\InputFile;
 use Telegram\Bot\Laravel\Facades\Telegram;
 use Telegram\Bot\Objects\Update;
@@ -22,6 +25,8 @@ class TelegramUpdateProcessor
     protected VideoService $videoService;
     protected TripayService $tripayService;
     protected PaymentRepository $paymentRepository;
+    protected ?Category $category = null;
+    protected ?Api $bot = null;
 
     public function __construct(
         TelegramService $telegramService,
@@ -37,11 +42,61 @@ class TelegramUpdateProcessor
     }
 
     /**
-     * Process a single update from Telegram
+     * Set category context for multi-bot support
      */
-    public function processUpdate(Update $update): void
+    public function setCategory(?Category $category): self
+    {
+        $this->category = $category;
+        $this->bot = null;
+
+        // Also set category on telegram service
+        if ($category) {
+            $this->telegramService->setCategory($category);
+            app()->instance('telegram.category', $category);
+        } else {
+            app()->forgetInstance('telegram.category');
+        }
+
+        return $this;
+    }
+
+    /**
+     * Get current category
+     */
+    public function getCategory(): ?Category
+    {
+        return $this->category;
+    }
+
+    /**
+     * Get the bot API instance for current category
+     */
+    protected function getBot(): Api
+    {
+        if ($this->category && $this->category->bot_token) {
+            if (!$this->bot) {
+                $this->bot = new Api($this->category->bot_token);
+            }
+            return $this->bot;
+        }
+
+        return Telegram::bot();
+    }
+
+    /**
+     * Process a single update from Telegram
+     *
+     * @param Update $update The Telegram update object
+     * @param Category|null $category Optional category context for multi-bot support
+     */
+    public function processUpdate(Update $update, ?Category $category = null): void
     {
         try {
+            // Set category context if provided
+            if ($category) {
+                $this->setCategory($category);
+            }
+
             // Handle callback query
             if ($update->getCallbackQuery()) {
                 $this->handleCallbackQuery($update);
@@ -53,9 +108,17 @@ class TelegramUpdateProcessor
             if ($update->getMessage() && isset($update->getMessage()->text)) {
                 $text = $update->getMessage()->text;
                 if (str_starts_with($text, '/')) {
-                    Telegram::processCommand($update);
+                    // For category-specific bots, process command with their API
+                    if ($this->category) {
+                        $this->getBot()->processCommand($update);
+                    } else {
+                        Telegram::processCommand($update);
+                    }
                     $commandHandled = true;
-                    Log::info('Command processed', ['command' => $text]);
+                    Log::info('Command processed', [
+                        'command' => $text,
+                        'category' => $this->category?->name ?? 'default'
+                    ]);
                 }
             }
 
@@ -66,7 +129,8 @@ class TelegramUpdateProcessor
         } catch (\Exception $e) {
             Log::error('Update processing error', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
+                'category' => $this->category?->name ?? 'default'
             ]);
         }
     }
@@ -86,10 +150,11 @@ class TelegramUpdateProcessor
                 'user_id' => $telegramUserId,
                 'user_name' => $callbackQuery->from->first_name,
                 'data' => $data,
+                'category' => $this->category?->name ?? 'default',
             ]);
 
-            // Answer callback query to remove loading state
-            Telegram::answerCallbackQuery([
+            // Answer callback query to remove loading state using appropriate bot
+            $this->getBot()->answerCallbackQuery([
                 'callback_query_id' => $callbackQuery->id,
             ]);
 
@@ -99,7 +164,8 @@ class TelegramUpdateProcessor
             }
         } catch (\Exception $e) {
             Log::error('Callback query handler error', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'category' => $this->category?->name ?? 'default',
             ]);
         }
     }
@@ -109,12 +175,25 @@ class TelegramUpdateProcessor
      */
     private function handleVipPackageSelection($callbackQuery, string $package, int $chatId): void
     {
-        $telegramUser = TelegramUser::findOrCreateFromTelegram($callbackQuery->from);
+        $telegramUser = User::findOrCreateFromTelegram($callbackQuery->from);
+        $category = $this->category ?? Category::getDefault();
 
-        if ($telegramUser->isVip()) {
+        if (!$category) {
             $this->telegramService->sendMessage(
                 $chatId,
-                'Anda sudah VIP dan akan expired pada ' . $telegramUser->vip_until->format('d M Y H:i')
+                'Kategori tidak ditemukan. Silakan hubungi admin.'
+            );
+            return;
+        }
+
+        if ($category && $telegramUser->isVipForCategory($category->id)) {
+            $vipExpiry = $telegramUser->getVipExpiryForCategory($category->id);
+            $expiryText = $vipExpiry?->format('d M Y H:i') ?? 'N/A';
+            $categoryName = $category->name ?? 'default';
+
+            $this->telegramService->sendMessage(
+                $chatId,
+                "Anda sudah VIP untuk kategori {$categoryName}.\nBerlaku hingga: {$expiryText}"
             );
             return;
         }
@@ -128,7 +207,7 @@ class TelegramUpdateProcessor
             return;
         }
 
-        $packageData = $this->tripayService->getPackageDetails($package);
+        $packageData = $this->tripayService->getPackageDetails($package, $category->id);
         if (!$packageData) {
             $this->telegramService->sendMessage($chatId, 'Paket VIP tidak valid.');
             return;
@@ -138,7 +217,9 @@ class TelegramUpdateProcessor
             $existingPayment = $this->paymentRepository->findReusablePayment(
                 $telegramUser->id,
                 $package,
-                'QRIS'
+                'QRIS',
+                $category->id,
+                (int) ($packageData['price'] ?? 0)
             );
 
             if ($existingPayment && $existingPayment->tripay_qr_string) {
@@ -160,20 +241,17 @@ class TelegramUpdateProcessor
                 $totalAmount = $basePrice + $feeAmount;
 
                 $caption = "<b>QRIS VIP {$packageData['name']}</b>\n\n";
-                $caption .= "💰 <b>Detail Pembayaran:</b>\n";
+                $caption .= "<b>Detail Pembayaran:</b>\n";
                 $caption .= "Harga Paket: Rp " . number_format($basePrice, 0, ',', '.') . "\n";
                 if ($feeAmount > 0) {
                     $caption .= "Biaya Layanan: Rp " . number_format($feeAmount, 0, ',', '.') . "\n";
-                    $caption .= "─────────────────\n";
-                    $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
-                } else {
-                    $caption .= "─────────────────\n";
-                    $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
                 }
+                $caption .= "----------------\n";
+                $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
                 if ($expiredAt) {
-                    $caption .= "⏰ Berlaku sampai: {$expiredAt}\n\n";
+                    $caption .= "Berlaku sampai: {$expiredAt}\n\n";
                 }
-                $caption .= "📱 QRIS ini masih aktif. Silakan scan untuk pembayaran.";
+                $caption .= "QRIS ini masih aktif. Silakan scan untuk pembayaran.";
 
                 $this->sendQrImage($chatId, $qrPath, $caption);
 
@@ -183,9 +261,9 @@ class TelegramUpdateProcessor
             $paymentData = PaymentData::fromRequest([
                 'package' => $package,
                 'payment_method' => 'QRIS',
-            ], $telegramUser, $packageData['price']);
+                'category_id' => $category->id,
+            ], $telegramUser, (int) ($packageData['price'] ?? 0), $packageData);
 
-            // Use default expiry from config (no need to specify 600 anymore)
             $result = $this->tripayService->createPayment($paymentData);
 
             $qrString = $result['qr_string'] ?? null;
@@ -214,20 +292,17 @@ class TelegramUpdateProcessor
             $totalAmount = $basePrice + $feeAmount;
 
             $caption = "<b>QRIS VIP {$packageData['name']}</b>\n\n";
-            $caption .= "💰 <b>Detail Pembayaran:</b>\n";
+            $caption .= "<b>Detail Pembayaran:</b>\n";
             $caption .= "Harga Paket: Rp " . number_format($basePrice, 0, ',', '.') . "\n";
             if ($feeAmount > 0) {
                 $caption .= "Biaya Layanan: Rp " . number_format($feeAmount, 0, ',', '.') . "\n";
-                $caption .= "─────────────────\n";
-                $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
-            } else {
-                $caption .= "─────────────────\n";
-                $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
             }
+            $caption .= "----------------\n";
+            $caption .= "<b>Total Bayar: Rp " . number_format($totalAmount, 0, ',', '.') . "</b>\n\n";
             if ($expiredAt) {
-                $caption .= "⏰ Berlaku sampai: {$expiredAt}\n\n";
+                $caption .= "Berlaku sampai: {$expiredAt}\n\n";
             }
-            $caption .= "📱 Silakan scan QRIS ini untuk pembayaran.";
+            $caption .= "Silakan scan QRIS ini untuk pembayaran.";
 
             $this->sendQrImage($chatId, $qrPath, $caption);
 
@@ -235,7 +310,7 @@ class TelegramUpdateProcessor
             Log::error('Failed to create Tripay payment', [
                 'error' => $e->getMessage(),
                 'package' => $package,
-                'telegram_user_id' => $telegramUser->telegram_user_id,
+                'telegram_id' => $telegramUser->telegram_id,
             ]);
             $this->telegramService->sendMessage(
                 $chatId,
@@ -301,7 +376,8 @@ class TelegramUpdateProcessor
             return;
         }
 
-        Telegram::sendPhoto([
+        // Use appropriate bot for sending photo
+        $this->getBot()->sendPhoto([
             'chat_id' => $chatId,
             'photo' => InputFile::create($filePath),
             'caption' => $caption,
@@ -378,11 +454,11 @@ class TelegramUpdateProcessor
         try {
             // Security: Only admin and moderator can use conversation (add movie flow)
             $authService = app(\App\Services\TelegramAuthService::class);
-            if (!$authService->canAddMovies($botState->telegram_user_id)) {
+            if (!$authService->canAddMovies($botState->telegram_id)) {
                 Log::warning('Unauthorized user attempting conversation', [
-                    'user_id' => $botState->telegram_user_id
+                    'user_id' => $botState->telegram_id
                 ]);
-                BotState::clearState($botState->telegram_user_id);
+                BotState::clearState($botState->telegram_id);
                 return;
             }
 
@@ -414,10 +490,12 @@ class TelegramUpdateProcessor
 
             $this->telegramService->sendMessage(
                 $chatId,
-                "❌ <b>Terjadi kesalahan!</b>\n\nGunakan /addmovie untuk mulai ulang."
+                "<b>Terjadi kesalahan.</b>
+
+Gunakan /addmovie untuk mulai ulang."
             );
 
-            BotState::clearState($botState->telegram_user_id);
+            BotState::clearState($botState->telegram_id);
         }
     }
 
@@ -449,7 +527,7 @@ class TelegramUpdateProcessor
         }
 
         if (!$fileId) {
-            $this->telegramService->sendMessage($chatId, "❌ Mohon kirim foto untuk thumbnail.");
+            $this->telegramService->sendMessage($chatId, 'Mohon kirim foto untuk thumbnail.');
             return;
         }
 
@@ -460,13 +538,13 @@ class TelegramUpdateProcessor
 
         $messageId = $this->telegramService->sendMessage(
             $chatId,
-            "✅ Thumbnail telah diterima! 📝 Silakan masukkan judul film"
+            'Thumbnail diterima. Silakan masukkan judul film.'
         );
 
         $data = $this->addMessageId($data, $messageId);
-        BotState::setState($botState->telegram_user_id, 'AWAITING_TITLE', $data);
+        BotState::setState($botState->telegram_id, 'AWAITING_TITLE', $data);
 
-        Log::info('Thumbnail uploaded', ['user_id' => $botState->telegram_user_id]);
+        Log::info('Thumbnail uploaded', ['user_id' => $botState->telegram_id]);
     }
 
     /**
@@ -475,7 +553,7 @@ class TelegramUpdateProcessor
     private function handleTitleInput(BotState $botState, $message, int $chatId): void
     {
         if (!isset($message->text) || empty(trim($message->text))) {
-            $this->telegramService->sendMessage($chatId, "❌ Mohon kirim teks untuk judul.");
+            $this->telegramService->sendMessage($chatId, 'Mohon kirim teks untuk judul.');
             return;
         }
 
@@ -488,11 +566,13 @@ class TelegramUpdateProcessor
 
         $messageId = $this->telegramService->sendMessage(
             $chatId,
-            "✅ Judul telah diterima! 🎽️ Judul: {$title} 🔢 Silakan masukkan jumlah part (1-50)"
+            "Judul diterima.
+Judul: {$title}
+Silakan masukkan jumlah part (1-50)."
         );
 
         $data = $this->addMessageId($data, $messageId);
-        BotState::setState($botState->telegram_user_id, 'AWAITING_PART_COUNT', $data);
+        BotState::setState($botState->telegram_id, 'AWAITING_PART_COUNT', $data);
 
         Log::info('Title set', ['title' => $title]);
     }
@@ -503,14 +583,14 @@ class TelegramUpdateProcessor
     private function handlePartCountInput(BotState $botState, $message, int $chatId): void
     {
         if (!isset($message->text) || !is_numeric(trim($message->text))) {
-            $this->telegramService->sendMessage($chatId, "❌ Mohon kirim angka untuk jumlah part.");
+            $this->telegramService->sendMessage($chatId, 'Mohon kirim angka untuk jumlah part.');
             return;
         }
 
         $partCount = (int) trim($message->text);
 
         if ($partCount < 1 || $partCount > 50) {
-            $this->telegramService->sendMessage($chatId, "❌ Jumlah part harus antara 1-50.");
+            $this->telegramService->sendMessage($chatId, 'Jumlah part harus antara 1-50.');
             return;
         }
 
@@ -523,11 +603,12 @@ class TelegramUpdateProcessor
 
         $messageId = $this->telegramService->sendMessage(
             $chatId,
-            "✅ Jumlah part telah diterima! 📀 Jumlah part Anda ada: {$partCount} 📹 Silakan masukkan Part 1/{$partCount}"
+            "Jumlah part diterima. Total part: {$partCount}.
+Silakan masukkan Part 1/{$partCount}."
         );
 
         $data = $this->addMessageId($data, $messageId);
-        BotState::setState($botState->telegram_user_id, 'AWAITING_VIDEO_PART', $data);
+        BotState::setState($botState->telegram_id, 'AWAITING_VIDEO_PART', $data);
 
         Log::info('Part count set', ['count' => $partCount]);
     }
@@ -544,7 +625,7 @@ class TelegramUpdateProcessor
         if (!isset($message->video) || !$message->video) {
             $this->telegramService->sendMessage(
                 $chatId,
-                "❌ Mohon kirim video untuk Part {$currentPart}/{$totalParts}"
+                "Mohon kirim video untuk Part {$currentPart}/{$totalParts}."
             );
             return;
         }
@@ -554,7 +635,7 @@ class TelegramUpdateProcessor
         if (!isset($video->file_id) || !$video->file_id) {
             $this->telegramService->sendMessage(
                 $chatId,
-                "❌ Gagal mendapatkan file_id video. Silakan kirim ulang Part {$currentPart}/{$totalParts}"
+                "Gagal mendapatkan file_id video. Silakan kirim ulang Part {$currentPart}/{$totalParts}."
             );
             return;
         }
@@ -567,7 +648,7 @@ class TelegramUpdateProcessor
         if ($fileSize && $fileSize > 1610612736) { // 1.5GB in bytes
             $this->telegramService->sendMessage(
                 $chatId,
-                "⚠️ Video Part {$currentPart}/{$totalParts} berukuran besar (" . round($fileSize / 1048576, 2) . " MB). Pastikan ukuran tidak melebihi 2GB."
+                "Video Part {$currentPart}/{$totalParts} berukuran besar (" . round($fileSize / 1048576, 2) . " MB). Pastikan ukuran tidak melebihi 2GB."
             );
         }
 
@@ -586,13 +667,13 @@ class TelegramUpdateProcessor
         if ($currentPart >= $totalParts) {
             $messageId = $this->telegramService->sendMessage(
                 $chatId,
-                "✅ Video Part {$currentPart}/{$totalParts} (END) telah dimasukkan! ⏳ Memproses dan posting ke channel..."
+                "Video Part {$currentPart}/{$totalParts} (END) diterima. Memproses dan posting ke channel..."
             );
 
             $data = $this->addMessageId($data, $messageId);
 
-            $this->createMovieFromState($data, $chatId, $botState->telegram_user_id);
-            BotState::clearState($botState->telegram_user_id);
+            $this->createMovieFromState($data, $chatId, $botState->telegram_id);
+            BotState::clearState($botState->telegram_id);
 
             Log::info('Movie created', ['title' => $data['title']]);
         } else {
@@ -604,11 +685,11 @@ class TelegramUpdateProcessor
 
             $messageId = $this->telegramService->sendMessage(
                 $chatId,
-                "✅ Video Part {$currentPart}/{$totalParts} telah diterima! [{$progress}] 📹 Silakan masukkan Part {$nextPart}/{$totalParts}{$nextPartLabel}"
+                "Video Part {$currentPart}/{$totalParts} diterima. [{$progress}] Silakan masukkan Part {$nextPart}/{$totalParts}{$nextPartLabel}."
             );
 
             $data = $this->addMessageId($data, $messageId);
-            BotState::setState($botState->telegram_user_id, 'AWAITING_VIDEO_PART', $data);
+            BotState::setState($botState->telegram_id, 'AWAITING_VIDEO_PART', $data);
 
             Log::info('Video part uploaded', ['part' => $currentPart, 'total' => $totalParts]);
         }
@@ -620,25 +701,49 @@ class TelegramUpdateProcessor
     private function createMovieFromState(array $data, int $chatId, int $telegramUserId): void
     {
         try {
+            // Get category_id from state data (set by AddMovieCommand) or from processor context
+            $categoryId = $data['category_id'] ?? $this->category?->id;
+
+            // Set category on video service for channel posting
+            if ($categoryId && !$this->category) {
+                // Load category from ID if not set in context
+                $category = Category::find($categoryId);
+                if ($category) {
+                    $this->videoService->setCategory($category);
+                }
+            } elseif ($this->category) {
+                $this->videoService->setCategory($this->category);
+            }
+
+            $creatorId = User::where('telegram_id', $telegramUserId)->value('id');
+
             $movie = $this->videoService->createMovie([
                 'title' => $data['title'],
                 'thumbnail_file_id' => $data['thumbnail_file_id'],
                 'total_parts' => $data['total_parts'],
                 'video_parts' => $data['video_parts'],
-                'created_by' => $telegramUserId,
+                'created_by' => $creatorId,
+                'category_id' => $categoryId,
             ]);
 
             // Send success message
             $messageId = $this->telegramService->sendMessage(
                 $chatId,
-                "🎉 Film baru telah ditambahkan! 🎽️ Judul: {$movie->title} 📀 Total: {$movie->total_parts} part 💬 Riwayat ini akan di-clear dalam 3 detik..."
+                "Film baru telah ditambahkan.
+Judul: {$movie->title}
+Total: {$movie->total_parts} part
+Riwayat ini akan dihapus dalam 3 detik..."
             );
 
             $data = $this->addMessageId($data, $messageId);
 
-            // Wait 3 seconds then clear chat history
-            sleep(3);
-            $this->clearChatHistory($chatId, $telegramUserId, $data);
+            ClearChatHistory::dispatch(
+                $chatId,
+                $telegramUserId,
+                $data['message_ids'] ?? [],
+                $movie->title,
+                $categoryId
+            )->delay(now()->addSeconds(3));
         } catch (\Exception $e) {
             Log::error('Failed to create movie', [
                 'error' => $e->getMessage(),
@@ -647,51 +752,14 @@ class TelegramUpdateProcessor
 
             $this->telegramService->sendMessage(
                 $chatId,
-                "❌ <b>Gagal menyimpan film!</b>\n\n" .
-                'Error: ' . $e->getMessage() . "\n\n" .
+                "<b>Gagal menyimpan film.</b>
+
+" .
+                'Error: ' . $e->getMessage() . "
+
+" .
                 'Silakan coba lagi dengan /addmovie'
             );
-        }
-    }
-
-    /**
-     * Clear chat history (delete messages)
-     */
-    private function clearChatHistory(int $chatId, int $telegramUserId, array $data): void
-    {
-        try {
-            $messageIds = $data['message_ids'] ?? [];
-            $deletedCount = 0;
-
-            Log::info('Clearing chat history', [
-                'total_messages' => count($messageIds)
-            ]);
-
-            // Delete all tracked messages
-            foreach ($messageIds as $messageId) {
-                if ($this->telegramService->deleteMessage($chatId, $messageId)) {
-                    $deletedCount++;
-                }
-                // Small delay to avoid rate limiting
-                usleep(50000); // 50ms delay
-            }
-
-            Log::info('Chat history cleared', [
-                'telegram_user_id' => $telegramUserId,
-                'total_messages' => count($messageIds),
-                'deleted_count' => $deletedCount
-            ]);
-
-            // Send final completion message
-            $this->telegramService->sendMessage(
-                $chatId,
-                "🧹 Riwayat chat telah dibersihkan! Film {$data['title']} berhasil diposting ke channel. Gunakan /addmovie untuk menambah film baru."
-            );
-        } catch (\Exception $e) {
-            Log::error('Failed to clear chat history', [
-                'error' => $e->getMessage(),
-                'telegram_user_id' => $telegramUserId
-            ]);
         }
     }
 

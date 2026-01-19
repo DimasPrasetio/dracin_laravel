@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Observers\UserObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,6 +26,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiting();
+        $this->registerGates();
         $this->registerObservers();
     }
 
@@ -34,6 +36,13 @@ class AppServiceProvider extends ServiceProvider
     private function registerObservers(): void
     {
         User::observe(UserObserver::class);
+    }
+
+    private function registerGates(): void
+    {
+        Gate::define('manageCategories', function (User $user): bool {
+            return $user->canManageCategories();
+        });
     }
 
     private function configureRateLimiting(): void

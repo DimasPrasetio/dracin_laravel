@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
-@section('title', 'Bot Admin Management')
+@section('title', 'Bot Staff Management')
 
 @section('content')
 <div class="animate-fade-in space-y-6">
     <!-- Page Header -->
     <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-            <h2 class="text-3xl font-bold text-gray-900">Bot Admin Management</h2>
-            <p class="mt-1 text-sm text-gray-600">Kelola admin dan moderator bot Telegram</p>
+            <h2 class="text-3xl font-bold text-gray-900">Bot Staff Management</h2>
+            <p class="mt-1 text-sm text-gray-600">Kelola admin dan moderator bot per kategori</p>
         </div>
         <button onclick="showPermissionMatrix()" class="inline-flex items-center px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-sm">
             <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,10 +83,19 @@
         <div class="px-6 py-5 border-b border-gray-100">
             <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
                 <div>
-                    <h3 class="text-lg font-semibold text-gray-900">Telegram Users</h3>
-                    <p class="mt-1 text-sm text-gray-600">List of all bot users with their roles</p>
+                    <h3 class="text-lg font-semibold text-gray-900">Bot Users</h3>
+                    <p class="mt-1 text-sm text-gray-600">Semua bot user berasal dari tabel users (telegram_id)</p>
                 </div>
                 <div class="flex items-center space-x-3">
+                    <div class="relative">
+                        <select id="categoryFilter" class="w-64 px-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ $selectedCategoryId == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
                     <div class="relative">
                         <input type="text" id="search-input" placeholder="Search users..." class="w-64 px-4 py-2 pl-10 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
                         <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -105,7 +114,7 @@
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">User Info</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Role</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">VIP Status</th>
-                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Linked User</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Email</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Joined</th>
                         <th class="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider">Actions</th>
                     </tr>
@@ -169,52 +178,44 @@
                         <tbody class="bg-white">
                             <tr>
                                 <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">View Movies</td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
                             </tr>
                             <tr class="bg-gray-50">
                                 <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Add Movies</td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
                             </tr>
                             <tr>
                                 <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Edit Movies</td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
                             </tr>
                             <tr class="bg-gray-50">
                                 <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Delete Movies</td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
                             </tr>
                             <tr>
                                 <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Manage VIP</td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
                             </tr>
                             <tr class="bg-gray-50">
                                 <td class="px-4 py-3 text-sm text-gray-700 border border-gray-200">Manage Users</td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">✗</span></td>
-                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">✓</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-red-600">NO</span></td>
+                                <td class="px-4 py-3 text-center border border-gray-200"><span class="text-green-600">YES</span></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
 
-                <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <p class="text-sm font-semibold text-blue-900 mb-2">Note:</p>
-                    <ul class="text-sm text-blue-800 space-y-1 list-disc list-inside">
-                        <li><strong>User:</strong> Regular user, can only view movies</li>
-                        <li><strong>Moderator:</strong> Can add new movies via bot</li>
-                        <li><strong>Admin:</strong> Full access to all features</li>
-                    </ul>
-                </div>
             </div>
         </div>
     </div>
@@ -229,7 +230,7 @@
             </div>
 
             <div class="p-6">
-                <p class="mb-4 text-sm text-gray-600">Select new role for <strong id="roleChangeUserName"></strong>:</p>
+                <p class="mb-4 text-sm text-gray-600">Select role for <strong id="roleChangeUserName"></strong>:</p>
                 <input type="hidden" id="roleChangeUserId">
 
                 <div class="space-y-3">
@@ -237,7 +238,6 @@
                         <input type="radio" name="newRole" value="user" class="mt-0.5 w-4 h-4 text-blue-600">
                         <div class="ml-3">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">User</span>
-                            <p class="text-xs text-gray-500 mt-1">Can only view movies</p>
                         </div>
                     </label>
 
@@ -245,7 +245,6 @@
                         <input type="radio" name="newRole" value="moderator" class="mt-0.5 w-4 h-4 text-yellow-600">
                         <div class="ml-3">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Moderator</span>
-                            <p class="text-xs text-gray-500 mt-1">Can add movies only</p>
                         </div>
                     </label>
 
@@ -253,7 +252,6 @@
                         <input type="radio" name="newRole" value="admin" class="mt-0.5 w-4 h-4 text-red-600">
                         <div class="ml-3">
                             <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Admin</span>
-                            <p class="text-xs text-gray-500 mt-1">Full access to all features</p>
                         </div>
                     </label>
                 </div>
@@ -281,7 +279,11 @@ let currentPerPage = 10;
 
 // Load statistics
 function loadStats() {
-    fetch('/bot-admins/stats')
+    const params = new URLSearchParams({
+        category_id: document.getElementById('categoryFilter').value
+    });
+
+    fetch(`/bot-admins/stats?${params}`)
         .then(response => response.json())
         .then(data => {
             document.getElementById('stat-total-users').textContent = data.total_users;
@@ -310,7 +312,8 @@ function loadUsers(page = 1) {
     const params = new URLSearchParams({
         page: page,
         per_page: currentPerPage,
-        q: currentQuery
+        q: currentQuery,
+        category_id: document.getElementById('categoryFilter').value
     });
 
     fetch(`/bot-admins/data?${params}`)
@@ -365,9 +368,9 @@ function renderUsersTable(data) {
                 <td class="px-6 py-4">${roleBadge}</td>
                 <td class="px-6 py-4">${vipBadge}</td>
                 <td class="px-6 py-4">
-                    ${user.linked_user_name
-                        ? `<div class="text-sm font-medium text-gray-900">${user.linked_user_name}</div><div class="text-xs text-gray-500">${user.linked_user_email}</div>`
-                        : '<span class="text-sm text-gray-400">Not linked</span>'
+                    ${user.email
+                        ? `<div class="text-sm text-gray-900">${user.email}</div>`
+                        : '<span class="text-sm text-gray-400">No email</span>'
                     }
                 </td>
                 <td class="px-6 py-4">
@@ -462,6 +465,7 @@ function setRole(userId, currentRole, userName) {
 function confirmRoleChange() {
     const userId = document.getElementById('roleChangeUserId').value;
     const selectedRole = document.querySelector('input[name="newRole"]:checked');
+    const categoryId = document.getElementById('categoryFilter').value;
 
     if (!selectedRole) {
         showError('Please select a role.');
@@ -476,7 +480,7 @@ function confirmRoleChange() {
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
         },
-        body: JSON.stringify({ role: selectedRole.value })
+        body: JSON.stringify({ role: selectedRole.value, category_id: categoryId })
     })
     .then(response => response.json())
     .then(data => {
@@ -515,6 +519,10 @@ document.getElementById('search-input').addEventListener('keypress', (e) => {
         currentQuery = e.target.value;
         loadUsers(1);
     }
+});
+
+document.getElementById('categoryFilter').addEventListener('change', () => {
+    loadUsers(1);
 });
 
 // Initial load

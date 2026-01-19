@@ -16,11 +16,11 @@ class TelegramModeCommand extends Command
         $mode = strtolower($this->argument('mode'));
 
         if (!in_array($mode, ['polling', 'webhook'])) {
-            $this->error('❌ Invalid mode! Use "polling" or "webhook"');
+            $this->error(' Invalid mode! Use "polling" or "webhook"');
             return Command::FAILURE;
         }
 
-        $this->info("🔄 Switching to {$mode} mode...");
+        $this->info(" Switching to {$mode} mode...");
         $this->newLine();
 
         try {
@@ -29,13 +29,13 @@ class TelegramModeCommand extends Command
                 $response = Telegram::removeWebhook();
 
                 if ($response) {
-                    $this->info('✅ Switched to POLLING mode successfully!');
+                    $this->info(' Switched to POLLING mode successfully!');
                     $this->newLine();
-                    $this->info('💡 Next steps:');
+                    $this->info(' Next steps:');
                     $this->line('   1. Update .env: TELE_BOT_MODE=polling');
                     $this->line('   2. Start polling: php artisan telegram:polling');
                     $this->newLine();
-                    $this->warn('⚠️  Remember to use a process manager (supervisor/pm2) in production!');
+                    $this->warn('  Remember to use a process manager (supervisor/pm2) in production!');
 
                     Log::info('Switched to polling mode');
 
@@ -46,9 +46,9 @@ class TelegramModeCommand extends Command
                 $webhookUrl = config('telegram.webhook_url', env('TELEGRAM_WEBHOOK_URL'));
 
                 if (!$webhookUrl) {
-                    $this->error('❌ Webhook URL not configured!');
+                    $this->error(' Webhook URL not configured!');
                     $this->newLine();
-                    $this->info('💡 Please set TELEGRAM_WEBHOOK_URL in .env:');
+                    $this->info(' Please set TELEGRAM_WEBHOOK_URL in .env:');
                     $this->line('   TELEGRAM_WEBHOOK_URL=https://yourdomain.com/api/telegram/webhook');
                     $this->newLine();
                     $this->info('Or use:');
@@ -59,7 +59,7 @@ class TelegramModeCommand extends Command
 
                 // Validate HTTPS
                 if (!str_starts_with($webhookUrl, 'https://')) {
-                    $this->error('❌ Webhook URL must use HTTPS!');
+                    $this->error(' Webhook URL must use HTTPS!');
                     return Command::FAILURE;
                 }
 
@@ -78,15 +78,15 @@ class TelegramModeCommand extends Command
                 $response = Telegram::setWebhook($params);
 
                 if ($response) {
-                    $this->info('✅ Switched to WEBHOOK mode successfully!');
+                    $this->info(' Switched to WEBHOOK mode successfully!');
                     $this->newLine();
-                    $this->info('💡 Next steps:');
+                    $this->info(' Next steps:');
                     $this->line('   1. Update .env: TELE_BOT_MODE=webhook');
                     $this->line('   2. Stop any running polling processes');
                     $this->line('   3. Test: Send a message to your bot');
                     $this->line('   4. Check status: php artisan telegram:webhook:info');
                     $this->newLine();
-                    $this->info('📊 Webhook Info:');
+                    $this->info(' Webhook Info:');
                     $this->call('telegram:webhook:info');
 
                     Log::info('Switched to webhook mode', ['url' => $webhookUrl]);
@@ -95,10 +95,10 @@ class TelegramModeCommand extends Command
                 }
             }
 
-            $this->error('❌ Failed to switch mode!');
+            $this->error(' Failed to switch mode!');
             return Command::FAILURE;
         } catch (\Exception $e) {
-            $this->error('❌ Error: ' . $e->getMessage());
+            $this->error(' Error: ' . $e->getMessage());
             Log::error('Failed to switch mode', [
                 'mode' => $mode,
                 'error' => $e->getMessage()
@@ -107,3 +107,4 @@ class TelegramModeCommand extends Command
         }
     }
 }
+

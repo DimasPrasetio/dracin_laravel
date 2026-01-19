@@ -78,6 +78,21 @@
                 </div>
                 <div class="flex flex-col sm:flex-row gap-3">
                     <div class="relative">
+                        <select id="category-filter" data-super-admin="{{ auth()->user()?->isSuperAdmin() ? '1' : '0' }}" class="w-56 px-4 py-2.5 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200" {{ $categories->isEmpty() ? 'disabled' : '' }}>
+                            @if(auth()->user()?->isSuperAdmin())
+                                <option value="all" selected>Semua Kategori</option>
+                            @else
+                                <option value="" disabled selected>Pilih kategori</option>
+                            @endif
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
+                        @if($categories->isEmpty())
+                            <p class="mt-2 text-xs text-red-500">Tidak ada kategori yang bisa diakses.</p>
+                        @endif
+                    </div>
+                    <div class="relative">
                         <input type="text" id="search-input" placeholder="Search by transaction ID, username..."
                             class="w-64 px-4 py-2.5 pl-10 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,6 +119,7 @@
                     <tr>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Transaction ID</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">User</th>
+                        <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Kategori</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Package</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Amount</th>
                         <th class="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Status</th>
@@ -134,7 +150,6 @@
                 <div class="px-6 py-4 border-b border-gray-100">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Transactions</p>
                             <h3 class="text-lg font-semibold text-gray-900">Update Payment Status</h3>
                         </div>
                         <button id="cancel-status-btn" class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" type="button">
@@ -151,15 +166,8 @@
                     <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
                         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
                             <div>
-                                <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Transaction Status</p>
                                 <h4 class="text-base font-semibold text-gray-900">Select latest status</h4>
                             </div>
-                            <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                </svg>
-                                Required
-                            </span>
                         </div>
                         <div class="p-4">
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Status</label>
@@ -170,20 +178,6 @@
                                 <option value="cancelled">Cancelled</option>
                             </select>
                         </div>
-                    </div>
-
-                    <div class="rounded-2xl border border-blue-100 bg-blue-50/70 p-4 text-sm text-blue-800 space-y-2">
-                        <div class="flex items-center gap-2 font-semibold">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                            </svg>
-                            Status Impact
-                        </div>
-                        <ul class="text-xs list-disc ml-5 space-y-1 text-blue-900/80">
-                            <li>Status <strong>Paid</strong> activates VIP automatically.</li>
-                            <li>Status <strong>Expired</strong>/<strong>Cancelled</strong> disables VIP access.</li>
-                            <li>Verify payment before updating the status.</li>
-                        </ul>
                     </div>
                 </div>
 
@@ -207,8 +201,23 @@ $(document).ready(function() {
     let totalPages = 1;
     let searchQuery = '';
     let statusFilter = '';
+    const categorySelect = $('#category-filter');
+    const isSuperAdmin = categorySelect.data('super-admin') === 1 || categorySelect.data('super-admin') === '1';
+    let categoryFilter = categorySelect.val();
+
+    if (!isSuperAdmin && !categoryFilter) {
+        const firstCategory = categorySelect.find('option:not([disabled])').first().val();
+        if (firstCategory) {
+            categorySelect.val(firstCategory);
+            categoryFilter = firstCategory;
+        }
+    }
 
     function loadPayments(page = 1) {
+        if (categorySelect.is(':disabled')) {
+            return;
+        }
+
         $.ajax({
             url: '{{ route("payments.data") }}',
             method: 'GET',
@@ -216,32 +225,28 @@ $(document).ready(function() {
                 page: page,
                 per_page: 10,
                 q: searchQuery,
-                status: statusFilter
+                status: statusFilter,
+                category_id: categoryFilter
             },
             success: function(response) {
                 currentPage = response.current_page;
                 totalPages = response.last_page;
 
-                updateStats(response.data);
+                updateStats(response.stats);
                 renderTable(response.data);
                 updatePagination(response);
             },
             error: function() {
-                showError('Failed to load transactions');
+                notifyError('Failed to load transactions');
             }
         });
     }
 
-    function updateStats(payments) {
-        const total = payments.length;
-        const paid = payments.filter(p => p.status === 'paid').length;
-        const pending = payments.filter(p => p.status === 'pending').length;
-        const failed = payments.filter(p => p.status === 'expired' || p.status === 'cancelled').length;
-
-        $('#total-transactions').text(total);
-        $('#paid-count').text(paid);
-        $('#pending-count').text(pending);
-        $('#failed-count').text(failed);
+    function updateStats(stats) {
+        $('#total-transactions').text(stats?.total ?? 0);
+        $('#paid-count').text(stats?.paid ?? 0);
+        $('#pending-count').text(stats?.pending ?? 0);
+        $('#failed-count').text(stats?.failed ?? 0);
     }
 
     function renderTable(payments) {
@@ -251,7 +256,7 @@ $(document).ready(function() {
         if (payments.length === 0) {
             tbody.append(`
                 <tr>
-                    <td colspan="7" class="px-6 py-12 text-center">
+                    <td colspan="8" class="px-6 py-12 text-center">
                         <div class="flex flex-col items-center justify-center">
                             <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
@@ -266,7 +271,7 @@ $(document).ready(function() {
         }
 
         payments.forEach(payment => {
-            const user = payment.telegram_user;
+            const user = payment.user;
             const statusBadge = getStatusBadge(payment.status);
             const amount = formatCurrency(payment.amount);
             const date = formatDate(payment.created_at);
@@ -279,6 +284,9 @@ $(document).ready(function() {
                     <td class="px-6 py-4">
                         <div class="text-sm font-medium text-gray-900 group-hover:text-blue-600 transition-colors">${user?.first_name || 'N/A'}</div>
                         <div class="text-sm text-gray-500 mt-0.5">@${user?.username || 'N/A'}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="text-sm font-semibold text-gray-900">${payment.category?.name || 'N/A'}</span>
                     </td>
                     <td class="px-6 py-4">
                         <span class="text-sm font-semibold text-gray-900">${payment.package}</span>
@@ -413,15 +421,15 @@ $(document).ready(function() {
             },
             success: function(response) {
                 if (response.ok) {
-                    showSuccess(response.message);
+                    notifySuccess(response.message);
                     $('#status-modal').addClass('hidden');
                     loadPayments(currentPage);
                 } else {
-                    showError(response.message);
+                    notifyError(response.message);
                 }
             },
             error: function() {
-                showError('Failed to update payment status');
+                notifyError('Failed to update payment status');
             }
         });
     });
@@ -436,6 +444,11 @@ $(document).ready(function() {
         loadPayments(1);
     });
 
+    $('#category-filter').change(function() {
+        categoryFilter = $(this).val();
+        loadPayments(1);
+    });
+
     function debounce(func, wait) {
         let timeout;
         return function() {
@@ -444,11 +457,27 @@ $(document).ready(function() {
         };
     }
 
-    function showSuccess(message) {
+    function notifySuccess(message) {
+        if (window.showSuccess) {
+            window.showSuccess(message);
+            return;
+        }
+        if (window.Swal) {
+            window.Swal.fire({ icon: 'success', title: 'Success', text: message });
+            return;
+        }
         alert(message);
     }
 
-    function showError(message) {
+    function notifyError(message) {
+        if (window.showError) {
+            window.showError(message);
+            return;
+        }
+        if (window.Swal) {
+            window.Swal.fire({ icon: 'error', title: 'Error', text: message });
+            return;
+        }
         alert(message);
     }
 

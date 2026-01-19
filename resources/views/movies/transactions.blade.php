@@ -93,6 +93,15 @@
                 </div>
                 <div class="flex items-center space-x-3">
                     <div class="relative">
+                        <select id="categoryFilter" class="w-56 px-4 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
+                            @foreach($categories as $category)
+                                <option value="{{ $category->id }}" {{ $selectedCategoryId == $category->id ? 'selected' : '' }}>
+                                    {{ $category->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="relative">
                         <input type="text" id="searchInput" placeholder="Search movies..." class="w-64 px-4 py-2 pl-10 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200">
                         <svg class="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
@@ -194,7 +203,8 @@ $(document).ready(function() {
                 page: currentPage,
                 per_page: perPage,
                 search: searchQuery,
-                status: statusFilter
+                status: statusFilter,
+                category_id: $('#categoryFilter').val()
             },
             success: function(response) {
                 renderTable(response.data);
@@ -385,7 +395,7 @@ $(document).ready(function() {
                     </div>
                     <div class="flex-1">
                         <h4 class="text-xl font-bold text-gray-900">${movie.title}</h4>
-                        <p class="text-sm text-gray-600">${movie.total_parts} parts • ${stats.total_views || 0} total views</p>
+                        <p class="text-sm text-gray-600">${movie.total_parts} parts - ${stats.total_views || 0} total views</p>
                     </div>
                 </div>
 
@@ -460,7 +470,7 @@ $(document).ready(function() {
                             </div>
                             <div>
                                 <div class="text-sm font-medium text-gray-900">${transaction.user?.first_name || 'Unknown User'}</div>
-                                <div class="text-xs text-gray-500">Part ${transaction.part_number} • ${formatDate(transaction.created_at)}</div>
+                                <div class="text-xs text-gray-500">Part ${transaction.part_number} - ${formatDate(transaction.created_at)}</div>
                             </div>
                         </div>
                         <div class="text-sm font-semibold text-green-600">${formatCurrency(transaction.amount)}</div>
@@ -505,6 +515,11 @@ $(document).ready(function() {
         loadMovies();
     });
 
+    $('#categoryFilter').change(function() {
+        currentPage = 1;
+        loadMovies();
+    });
+
     function formatCurrency(amount) {
         return 'Rp ' + new Intl.NumberFormat('id-ID').format(amount);
     }
@@ -524,3 +539,4 @@ $(document).ready(function() {
 });
 </script>
 @endpush
+

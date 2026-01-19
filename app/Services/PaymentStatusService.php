@@ -17,20 +17,28 @@ class PaymentStatusService
      */
     public function transition(Payment $payment, string $newStatus): Payment
     {
-        if ($payment->status === $newStatus) {
-            return $payment;
-        }
-
         return DB::transaction(function () use ($payment, $newStatus) {
-            $oldStatus = $payment->status;
+            $lockedPayment = Payment::whereKey($payment->id)
+                ->lockForUpdate()
+                ->first();
 
-            $payment->update(['status' => $newStatus]);
-            $payment->refresh();
+            if (!$lockedPayment) {
+                return $payment;
+            }
 
-            PaymentStatusCache::forget($payment->tripay_reference, $payment->tripay_merchant_ref);
+            if ($lockedPayment->status === $newStatus) {
+                return $lockedPayment;
+            }
 
-            DB::afterCommit(function () use ($payment, $newStatus) {
-                $this->dispatchEvent($payment, $newStatus);
+            $oldStatus = $lockedPayment->status;
+
+            $lockedPayment->update(['status' => $newStatus]);
+            $lockedPayment->refresh();
+
+            PaymentStatusCache::forget($lockedPayment->tripay_reference, $lockedPayment->tripay_merchant_ref);
+
+            DB::afterCommit(function () use ($lockedPayment, $newStatus) {
+                $this->dispatchEvent($lockedPayment, $newStatus);
             });
 
             Log::info('Payment status transitioned', [
@@ -39,7 +47,7 @@ class PaymentStatusService
                 'new_status' => $newStatus,
             ]);
 
-            return $payment;
+            return $lockedPayment;
         });
     }
 

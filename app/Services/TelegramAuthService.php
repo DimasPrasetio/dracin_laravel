@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\TelegramUser;
+use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
@@ -32,6 +32,30 @@ class TelegramAuthService
             $this->getCacheKey($telegramUserId, 'can_add_movies'),
             self::CACHE_TTL,
             fn() => $this->checkCanAddMoviesFromDatabase($telegramUserId)
+        );
+    }
+
+    /**
+     * Check if telegram user can add movies for a specific category
+     */
+    public function canAddMoviesForCategory(int|string $telegramUserId, int $categoryId): bool
+    {
+        return Cache::remember(
+            $this->getCacheKey($telegramUserId, "can_add_movies_category:{$categoryId}"),
+            self::CACHE_TTL,
+            fn() => $this->checkCanAddMoviesForCategoryFromDatabase($telegramUserId, $categoryId)
+        );
+    }
+
+    /**
+     * Check if telegram user is admin for a specific category
+     */
+    public function isCategoryAdmin(int|string $telegramUserId, int $categoryId): bool
+    {
+        return Cache::remember(
+            $this->getCacheKey($telegramUserId, "is_category_admin:{$categoryId}"),
+            self::CACHE_TTL,
+            fn() => $this->checkIsCategoryAdminFromDatabase($telegramUserId, $categoryId)
         );
     }
 
@@ -119,11 +143,9 @@ class TelegramAuthService
     /**
      * Get telegram user with eager loaded relations
      */
-    public function getTelegramUser(int|string $telegramUserId): ?TelegramUser
+    public function getTelegramUser(int|string $telegramUserId): ?User
     {
-        return TelegramUser::where('telegram_user_id', $telegramUserId)
-            ->with('linkedUser')
-            ->first();
+        return User::where('telegram_id', $telegramUserId)->first();
     }
 
     /**
@@ -135,8 +157,9 @@ class TelegramAuthService
             'telegram_auth:admin_ids',
             self::CACHE_TTL,
             function () {
-                return TelegramUser::admins()
-                    ->pluck('telegram_user_id')
+                return User::admins()
+                    ->whereNotNull('telegram_id')
+                    ->pluck('telegram_id')
                     ->toArray();
             }
         );
@@ -174,7 +197,13 @@ class TelegramAuthService
      */
     public function clearAllCache(): void
     {
-        Cache::tags(['telegram_auth'])->flush();
+        $store = Cache::getStore();
+
+        if (method_exists($store, 'supportsTags') && $store->supportsTags()) {
+            Cache::tags(['telegram_auth'])->flush();
+        } else {
+            Cache::flush();
+        }
 
         Log::info('All telegram auth cache cleared');
     }
@@ -204,7 +233,7 @@ class TelegramAuthService
             return false;
         }
 
-        return $user->canAddMovies();
+        return $user->isStaff();
     }
 
     /**
@@ -218,7 +247,7 @@ class TelegramAuthService
             return false;
         }
 
-        return $user->canEditMovies();
+        return $user->isAdmin();
     }
 
     /**
@@ -232,7 +261,7 @@ class TelegramAuthService
             return false;
         }
 
-        return $user->canDeleteMovies();
+        return $user->isAdmin();
     }
 
     /**
@@ -246,7 +275,7 @@ class TelegramAuthService
             return false;
         }
 
-        return $user->canManageVip();
+        return $user->isAdmin();
     }
 
     /**
@@ -288,7 +317,46 @@ class TelegramAuthService
             return false;
         }
 
-        return $user->hasPermission($permission);
+        return match ($permission) {
+            'add_movies' => $user->isStaff(),
+            'edit_movies' => $user->isAdmin(),
+            'delete_movies' => $user->isAdmin(),
+            'manage_vip' => $user->isAdmin(),
+            'manage_users' => $user->canManageUsers(),
+            'manage_payments' => $user->canManagePayments(),
+            'view_analytics' => $user->canViewAnalytics(),
+            // Legacy support
+            'manage_movies' => $user->isStaff(),
+            default => false,
+        };
+    }
+
+    /**
+     * Check if telegram user can add movies for specific category from database
+     */
+    private function checkCanAddMoviesForCategoryFromDatabase(int|string $telegramUserId, int $categoryId): bool
+    {
+        $user = $this->getTelegramUser($telegramUserId);
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->canAddMoviesForCategory($categoryId);
+    }
+
+    /**
+     * Check if telegram user is admin for specific category from database
+     */
+    private function checkIsCategoryAdminFromDatabase(int|string $telegramUserId, int $categoryId): bool
+    {
+        $user = $this->getTelegramUser($telegramUserId);
+
+        if (!$user) {
+            return false;
+        }
+
+        return $user->isAdminForCategory($categoryId);
     }
 
     /**
@@ -302,16 +370,16 @@ class TelegramAuthService
     /**
      * Promote telegram user to admin
      */
-    public function promoteToAdmin(TelegramUser $telegramUser): bool
+    public function promoteToAdmin(User $user): bool
     {
-        $result = $telegramUser->promoteToAdmin();
+        $result = $user->promoteToAdmin();
 
         if ($result) {
-            $this->clearUserCache($telegramUser->telegram_user_id);
+            $this->clearUserCache($user->telegram_id ?? $user->id);
 
             Log::info('Telegram user promoted to admin', [
-                'telegram_user_id' => $telegramUser->telegram_user_id,
-                'username' => $telegramUser->username,
+                'telegram_id' => $user->telegram_id,
+                'username' => $user->username,
             ]);
         }
 
@@ -321,16 +389,16 @@ class TelegramAuthService
     /**
      * Demote telegram user to regular user
      */
-    public function demoteToUser(TelegramUser $telegramUser): bool
+    public function demoteToUser(User $user): bool
     {
-        $result = $telegramUser->demoteToUser();
+        $result = $user->demoteToUser();
 
         if ($result) {
-            $this->clearUserCache($telegramUser->telegram_user_id);
+            $this->clearUserCache($user->telegram_id ?? $user->id);
 
             Log::info('Telegram user demoted to user', [
-                'telegram_user_id' => $telegramUser->telegram_user_id,
-                'username' => $telegramUser->username,
+                'telegram_id' => $user->telegram_id,
+                'username' => $user->username,
             ]);
         }
 
@@ -340,12 +408,12 @@ class TelegramAuthService
     /**
      * Toggle admin status
      */
-    public function toggleAdmin(TelegramUser $telegramUser): bool
+    public function toggleAdmin(User $user): bool
     {
-        if ($telegramUser->isAdmin()) {
-            return $this->demoteToUser($telegramUser);
+        if ($user->isAdmin()) {
+            return $this->demoteToUser($user);
         }
 
-        return $this->promoteToAdmin($telegramUser);
+        return $this->promoteToAdmin($user);
     }
 }

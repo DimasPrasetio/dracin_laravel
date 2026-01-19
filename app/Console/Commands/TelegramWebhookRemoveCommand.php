@@ -13,27 +13,27 @@ class TelegramWebhookRemoveCommand extends Command
 
     public function handle()
     {
-        $this->info('🔧 Removing webhook...');
+        $this->info(' Removing webhook...');
 
         try {
             $response = Telegram::removeWebhook();
 
             if ($response) {
                 $this->newLine();
-                $this->info('✅ Webhook removed successfully!');
+                $this->info(' Webhook removed successfully!');
                 $this->newLine();
-                $this->info('💡 You can now use polling mode:');
+                $this->info(' You can now use polling mode:');
                 $this->line('   php artisan telegram:polling');
 
                 Log::info('Webhook removed successfully');
 
                 return Command::SUCCESS;
             } else {
-                $this->error('❌ Failed to remove webhook!');
+                $this->error(' Failed to remove webhook!');
                 return Command::FAILURE;
             }
         } catch (\Exception $e) {
-            $this->error('❌ Error: ' . $e->getMessage());
+            $this->error(' Error: ' . $e->getMessage());
             Log::error('Failed to remove webhook', [
                 'error' => $e->getMessage()
             ]);
@@ -41,3 +41,4 @@ class TelegramWebhookRemoveCommand extends Command
         }
     }
 }
+

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
-use App\Models\TelegramUser;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Hash;
@@ -19,7 +18,7 @@ class UserController extends Controller
     public function data(Request $request)
     {
         if ($id = $request->get('id')) {
-            $u = User::with('linkedTelegramUser')->findOrFail($id);
+            $u = User::webUsers()->findOrFail($id);
             return response()->json([
                 'id' => $u->id,
                 'username' => $u->username,
@@ -27,16 +26,14 @@ class UserController extends Controller
                 'phone' => $u->phone,
                 'email' => $u->email,
                 'role' => $u->role,
-                'telegram_user_id' => $u->linkedTelegramUser?->telegram_user_id,
-                'telegram_username' => $u->linkedTelegramUser?->username,
+                'telegram_id' => $u->telegram_id,
                 'created_at' => $u->created_at?->toDateTimeString(),
             ]);
         }
 
         $q = $request->get('q');
         $perPage = (int)($request->get('per_page', 10));
-        $users = User::query()
-            ->with('linkedTelegramUser')
+        $users = User::webUsers()
             ->when($q, function ($qr) use ($q) {
                 $qr->where(function ($qq) use ($q) {
                     $qq->where('username','like',"%{$q}%")
@@ -56,9 +53,7 @@ class UserController extends Controller
                     'phone' => $u->phone,
                     'email' => $u->email,
                     'role' => $u->role,
-                    'telegram_user_id' => $u->linkedTelegramUser?->telegram_user_id,
-                    'telegram_username' => $u->linkedTelegramUser?->username,
-                    'telegram_role' => $u->linkedTelegramUser?->role,
+                    'telegram_id' => $u->telegram_id,
                     'created_at' => $u->created_at?->toDateTimeString(),
                 ];
             });
@@ -75,25 +70,20 @@ class UserController extends Controller
             'email' => ['required','email','max:191','unique:users,email'],
             'password' => ['required','string','min:6'],
             'role' => ['required','string','max:50'],
-            'telegram_user_id' => ['nullable','integer','exists:telegram_users,telegram_user_id'],
+            'telegram_id' => ['nullable','integer','unique:users,telegram_id'],
         ]);
         $data['password'] = Hash::make($data['password']);
 
         $user = User::create($data);
-
-        // Link to telegram user if provided
-        if (!empty($data['telegram_user_id'])) {
-            $telegramUser = TelegramUser::where('telegram_user_id', $data['telegram_user_id'])->first();
-            if ($telegramUser) {
-                $telegramUser->linkToUser($user);
-            }
-        }
 
         return response()->json(['ok'=>true,'id'=>$user->id]);
     }
 
     public function update(Request $request, User $user)
     {
+        if (!$user->canWebLogin()) {
+            abort(404);
+        }
         $data = $request->validate([
             'username' => ['required','string','max:191',Rule::unique('users','username')->ignore($user->id)],
             'name' => ['required','string','max:191'],
@@ -101,7 +91,7 @@ class UserController extends Controller
             'email' => ['required','email','max:191',Rule::unique('users','email')->ignore($user->id)],
             'password' => ['nullable','string','min:6'],
             'role' => ['required','string','max:50'],
-            'telegram_user_id' => ['nullable','integer','exists:telegram_users,telegram_user_id'],
+            'telegram_id' => ['nullable','integer',Rule::unique('users','telegram_id')->ignore($user->id)],
         ]);
         if (!empty($data['password'])) {
             $data['password'] = Hash::make($data['password']);
@@ -109,31 +99,16 @@ class UserController extends Controller
             unset($data['password']);
         }
 
-        // Handle telegram user linking
-        $oldTelegramUser = $user->linkedTelegramUser;
-        $newTelegramUserId = $data['telegram_user_id'] ?? null;
-        unset($data['telegram_user_id']);
-
         $user->update($data);
-
-        // Update telegram linking if changed
-        if ($oldTelegramUser && $oldTelegramUser->telegram_user_id != $newTelegramUserId) {
-            // Unlink old telegram user
-            $oldTelegramUser->unlinkFromUser();
-        }
-
-        if ($newTelegramUserId) {
-            $telegramUser = TelegramUser::where('telegram_user_id', $newTelegramUserId)->first();
-            if ($telegramUser) {
-                $telegramUser->linkToUser($user);
-            }
-        }
 
         return response()->json(['ok'=>true]);
     }
 
     public function destroy(User $user)
     {
+        if (!$user->canWebLogin()) {
+            abort(404);
+        }
         $user->delete();
         return response()->json(['ok'=>true]);
     }

@@ -17,19 +17,20 @@ class TelegramClearStateCommand extends Command
         if ($userId) {
             // Clear specific user
             BotState::clearState((int) $userId);
-            $this->info("✅ State cleared for user ID: {$userId}");
+            $this->info(" State cleared for user ID: {$userId}");
         } else {
             // Clear all states (with confirmation)
-            if (!$this->confirm('⚠️ Clear ALL user states?', false)) {
+            if (!$this->confirm(' Clear ALL user states?', false)) {
                 $this->info('Cancelled.');
                 return Command::SUCCESS;
             }
 
             $count = BotState::count();
             BotState::query()->delete();
-            $this->info("✅ Cleared {$count} state(s)");
+            $this->info(" Cleared {$count} state(s)");
         }
 
         return Command::SUCCESS;
     }
 }
+

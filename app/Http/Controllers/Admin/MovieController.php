@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Movie;
 use App\Models\Setting;
 use App\Models\Payment;
@@ -27,12 +28,21 @@ class MovieController extends Controller
 
     public function index()
     {
-        return view('movies.index');
+        $user = auth()->user();
+        $categories = $user ? $user->getAccessibleCategories() : collect();
+
+        return view('movies.index', compact('categories'));
     }
 
     public function data(Request $request)
     {
+        $user = $request->user();
         $query = Movie::with('videoParts')->latest();
+
+        if ($user && !$user->isSuperAdmin()) {
+            $categoryIds = $user->getAccessibleCategories()->pluck('id');
+            $query->whereIn('category_id', $categoryIds);
+        }
 
         if ($request->has('search') && $request->search['value']) {
             $search = $request->search['value'];
@@ -68,6 +78,7 @@ class MovieController extends Controller
     public function store(Request $request)
     {
         $validator = Validator::make($request->all(), [
+            'category_id' => 'required|integer|exists:categories,id',
             'title' => 'required|string|max:255',
             'thumbnail' => 'required|image|max:10240',
             'total_parts' => 'required|integer|min:1|max:50',
@@ -87,6 +98,18 @@ class MovieController extends Controller
         }
 
         try {
+            $category = Category::findOrFail($request->category_id);
+            $user = $request->user();
+
+            if ($user && !$user->isSuperAdmin() && !$user->canAddMoviesForCategory($category->id)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Anda tidak memiliki akses untuk kategori ini.'
+                ], 403);
+            }
+
+            $this->videoService->setCategory($category);
+
             // Ensure temp directory exists
             $tempDir = storage_path('app' . DIRECTORY_SEPARATOR . 'temp');
             if (!is_dir($tempDir)) {
@@ -146,6 +169,7 @@ class MovieController extends Controller
 
             // Create movie
             $movie = $this->videoService->createMovie([
+                'category_id' => $category->id,
                 'title' => $request->title,
                 'thumbnail_file_id' => $thumbnailFileId,
                 'total_parts' => $request->total_parts,
@@ -196,6 +220,7 @@ class MovieController extends Controller
 
     public function show(Movie $movie)
     {
+        $this->authorizeMovieAdmin($movie);
         $movie->load('videoParts');
         return view('movies.show', compact('movie'));
     }
@@ -207,6 +232,7 @@ class MovieController extends Controller
 
     public function update(Request $request, Movie $movie)
     {
+        $this->authorizeMovieAdmin($movie);
         $validator = Validator::make($request->all(), [
             'title' => 'required|string|max:255',
             'thumbnail' => 'nullable|image|max:10240',
@@ -273,6 +299,7 @@ class MovieController extends Controller
 
     public function destroy(Movie $movie)
     {
+        $this->authorizeMovieAdmin($movie);
         try {
             $this->videoService->deleteMovie($movie);
 
@@ -290,6 +317,7 @@ class MovieController extends Controller
 
     public function updateVip(Request $request, Movie $movie)
     {
+        $this->authorizeMovieAdmin($movie);
         $request->validate([
             'vip_parts' => 'nullable|array',
             'vip_parts.*' => 'integer',
@@ -313,12 +341,46 @@ class MovieController extends Controller
 
     public function transactions()
     {
-        return view('movies.transactions');
+        $user = auth()->user();
+        $categories = $user ? $user->getAccessibleCategories() : collect();
+        $selectedCategoryId = (int) (request()->input('category_id') ?? $categories->first()?->id ?? 0);
+
+        return view('movies.transactions', compact('categories', 'selectedCategoryId'));
     }
 
     public function transactionsData(Request $request)
     {
         $query = Movie::with('videoParts')->latest();
+        $user = $request->user();
+        $categories = $user ? $user->getAccessibleCategories() : collect();
+        $categoryIds = $categories->pluck('id');
+        $selectedCategoryId = $request->input('category_id');
+
+        if ($user && !$user->isSuperAdmin()) {
+            if (!$selectedCategoryId) {
+                return response()->json([
+                    'message' => 'Kategori wajib dipilih.',
+                ], 422);
+            }
+
+            if (!$categoryIds->contains((int) $selectedCategoryId)) {
+                return response()->json([
+                    'message' => 'Anda tidak memiliki akses ke kategori ini.',
+                ], 403);
+            }
+        } elseif ($selectedCategoryId && $selectedCategoryId !== 'all') {
+            if (!Category::whereKey($selectedCategoryId)->exists()) {
+                return response()->json([
+                    'message' => 'Kategori tidak ditemukan.',
+                ], 422);
+            }
+        }
+
+        if ($selectedCategoryId && $selectedCategoryId !== 'all') {
+            $query->where('category_id', $selectedCategoryId);
+        } elseif ($user && !$user->isSuperAdmin()) {
+            $query->whereIn('category_id', $categoryIds);
+        }
 
         // Apply filters
         if ($request->filled('search')) {
@@ -375,14 +437,34 @@ class MovieController extends Controller
         });
 
         // Calculate overall stats
-        $overallPayments = Payment::selectRaw('COUNT(*) as vip_access, SUM(amount) as revenue')
-            ->whereHas('videoPart', function ($query) {
-                $query->whereHas('movie');
-            })
+        $overallPaymentsQuery = Payment::query();
+
+        if ($selectedCategoryId && $selectedCategoryId !== 'all') {
+            $overallPaymentsQuery->where('category_id', $selectedCategoryId);
+        } elseif ($user && !$user->isSuperAdmin()) {
+            $overallPaymentsQuery->whereIn('category_id', $categoryIds);
+        }
+
+        $overallPayments = $overallPaymentsQuery
+            ->selectRaw('COUNT(*) as vip_access, SUM(amount) as revenue')
             ->first();
 
         $overallViews = ViewLog::selectRaw('COUNT(*) as views')
-            ->whereHas('videoPart', function ($query) {
+            ->whereHas('videoPart', function ($query) use ($user, $categoryIds, $selectedCategoryId) {
+                if ($selectedCategoryId && $selectedCategoryId !== 'all') {
+                    $query->whereHas('movie', function ($movieQuery) use ($selectedCategoryId) {
+                        $movieQuery->where('category_id', $selectedCategoryId);
+                    });
+                    return;
+                }
+
+                if ($user && !$user->isSuperAdmin()) {
+                    $query->whereHas('movie', function ($movieQuery) use ($categoryIds) {
+                        $movieQuery->whereIn('category_id', $categoryIds);
+                    });
+                    return;
+                }
+
                 $query->whereHas('movie');
             })
             ->first();
@@ -391,7 +473,14 @@ class MovieController extends Controller
             'total_revenue' => (int) ($overallPayments->revenue ?? 0),
             'total_vip_access' => (int) ($overallPayments->vip_access ?? 0),
             'total_views' => (int) ($overallViews->views ?? 0) + (int) ($overallPayments->vip_access ?? 0),
-            'active_movies' => Movie::whereNotNull('channel_message_id')->count(),
+            'active_movies' => Movie::whereNotNull('channel_message_id')
+                ->when($selectedCategoryId && $selectedCategoryId !== 'all', function ($query) use ($selectedCategoryId) {
+                    $query->where('category_id', $selectedCategoryId);
+                })
+                ->when($user && !$user->isSuperAdmin(), function ($query) use ($categoryIds) {
+                    $query->whereIn('category_id', $categoryIds);
+                })
+                ->count(),
         ];
 
         return response()->json([
@@ -403,10 +492,11 @@ class MovieController extends Controller
 
     public function transactionDetails(Movie $movie)
     {
+        $this->authorizeMovieAdmin($movie);
         $movie->load('videoParts');
 
         // Get payments for this movie
-        $transactions = Payment::with(['telegramUser', 'videoPart'])
+        $transactions = Payment::with(['user', 'videoPart'])
             ->whereHas('videoPart', function ($q) use ($movie) {
                 $q->where('movie_id', $movie->id);
             })
@@ -466,5 +556,22 @@ class MovieController extends Controller
             'transactions' => $transactions,
             'stats' => $stats,
         ]);
+    }
+
+    private function authorizeMovieAdmin(Movie $movie): void
+    {
+        $user = request()->user();
+
+        if (!$user) {
+            abort(403, 'Unauthorized access');
+        }
+
+        if ($user->isSuperAdmin()) {
+            return;
+        }
+
+        if (!$user->canEditMoviesForCategory((int) $movie->category_id)) {
+            abort(403, 'Anda tidak memiliki akses untuk kategori ini.');
+        }
     }
 }

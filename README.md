@@ -122,3 +122,14 @@ TRIPAY_MODE=sandbox
 ## License
 
 MIT
+
+
+php artisan data:audit
+php artisan data:audit --details
+
+
+php artisan data:repair-categories
+php artisan data:repair-categories --apply
+
+php artisan db:seed --class=CategorySeeder
+php artisan db:seed --class=UserSeeder

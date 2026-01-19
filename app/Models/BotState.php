@@ -8,11 +8,11 @@ use Carbon\Carbon;
 class BotState extends Model
 {
     public $timestamps = false;
-    protected $primaryKey = 'telegram_user_id';
+    protected $primaryKey = 'telegram_id';
     public $incrementing = false;
 
     protected $fillable = [
-        'telegram_user_id',
+        'telegram_id',
         'state',
         'data',
         'expires_at',
@@ -26,12 +26,12 @@ class BotState extends Model
     /**
      * Get or create state for user
      */
-    public static function getState(int $telegramUserId): ?self
+    public static function getState(int $telegramId): ?self
     {
         // Auto-cleanup expired states before fetching
         self::cleanupExpired();
 
-        $state = self::find($telegramUserId);
+        $state = self::find($telegramId);
 
         // Check if state is expired
         if ($state && $state->expires_at && $state->expires_at->isPast()) {
@@ -45,10 +45,10 @@ class BotState extends Model
     /**
      * Set state for user with 1 hour expiration
      */
-    public static function setState(int $telegramUserId, string $state, array $data = []): self
+    public static function setState(int $telegramId, string $state, array $data = []): self
     {
         return self::updateOrCreate(
-            ['telegram_user_id' => $telegramUserId],
+            ['telegram_id' => $telegramId],
             [
                 'state' => $state,
                 'data' => $data,
@@ -60,9 +60,9 @@ class BotState extends Model
     /**
      * Clear state for user
      */
-    public static function clearState(int $telegramUserId): void
+    public static function clearState(int $telegramId): void
     {
-        self::where('telegram_user_id', $telegramUserId)->delete();
+        self::where('telegram_id', $telegramId)->delete();
     }
 
     /**

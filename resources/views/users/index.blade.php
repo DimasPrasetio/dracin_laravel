@@ -1,13 +1,13 @@
 @extends('layouts.app')
 
-@section('title', 'User Management')
+@section('title', 'Users')
 
 @section('content')
 <div class="animate-fade-in space-y-6">
     <div class="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
         <div>
-            <h2 class="text-3xl font-bold text-gray-900">User Management</h2>
-            <p class="mt-1 text-sm text-gray-600">Manage and monitor all system users</p>
+            <h2 class="text-3xl font-bold text-gray-900">Users</h2>
+            <p class="mt-1 text-sm text-gray-600">Single source of truth untuk semua role dan user bot</p>
         </div>
         <div class="flex items-center space-x-3">
             <button onclick="exportData()" class="inline-flex items-center px-4 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 transition-all duration-200 shadow-sm">
@@ -95,16 +95,8 @@
                             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
                                     <div>
-                                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 1</p>
                                         <h4 class="text-base font-semibold text-gray-900">Informasi Identitas</h4>
-                                        <p class="text-xs text-gray-500">Data singkat untuk audit aktivitas admin.</p>
                                     </div>
-                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                        Wajib diisi
-                                    </span>
                                 </div>
                                 <div class="p-4 sm:p-5">
                                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -118,7 +110,6 @@
                                             </span>
                                             <input type="text" id="username" required class="w-full pl-12 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-inner">
                                         </div>
-                                        <p class="mt-1 text-xs text-gray-500">Digunakan untuk login internal panel admin.</p>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">Name <span class="text-red-500">*</span></label>
@@ -130,7 +121,6 @@
                                             </span>
                                             <input type="text" id="name" required class="w-full pl-12 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-inner">
                                         </div>
-                                        <p class="mt-1 text-xs text-gray-500">Nama lengkap akan muncul pada log aktivitas.</p>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">Email <span class="text-red-500">*</span></label>
@@ -142,7 +132,6 @@
                                             </span>
                                             <input type="email" id="email" required class="w-full pl-12 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-inner">
                                         </div>
-                                        <p class="mt-1 text-xs text-gray-500">Digunakan untuk notifikasi penting & reset akun.</p>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
@@ -154,7 +143,6 @@
                                             </span>
                                             <input type="text" id="phone" class="w-full pl-12 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-inner" placeholder="+62">
                                         </div>
-                                        <p class="mt-1 text-xs text-gray-500">Opsional - memudahkan koordinasi cepat via WhatsApp.</p>
                                     </div>
                                 </div>
                             </div>
@@ -162,16 +150,8 @@
                             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
                                     <div>
-                                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 2</p>
                                         <h4 class="text-base font-semibold text-gray-900">Integrasi Telegram Bot</h4>
-                                        <p class="text-xs text-gray-500">Link akun web dengan Telegram untuk sinkronisasi otomatis.</p>
                                     </div>
-                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-50 text-xs font-semibold text-green-700">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-                                        </svg>
-                                        Auto-sync role
-                                    </span>
                                 </div>
                                 <div class="p-4 sm:p-5">
                                     <div>
@@ -182,21 +162,9 @@
                                                     <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.14.18-.357.295-.6.295-.002 0-.003 0-.005 0l.213-3.054 5.56-5.022c.24-.213-.054-.334-.373-.121l-6.869 4.326-2.96-.924c-.64-.203-.658-.64.135-.954l11.566-4.458c.538-.196 1.006.128.832.941z"/>
                                                 </svg>
                                             </span>
-                                            <input type="number" id="telegram_user_id" class="w-full pl-12 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 shadow-inner" placeholder="e.g., 1597383375">
+                                            <input type="number" id="telegram_id" class="w-full pl-12 pr-4 py-3 text-sm bg-white border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 shadow-inner" placeholder="e.g., 1597383375">
                                         </div>
-                                        <div class="mt-2 flex items-start gap-2 p-3 rounded-2xl bg-green-50 border border-green-100">
-                                            <svg class="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                            </svg>
-                                            <div class="text-xs text-green-700">
-                                                <p class="font-semibold mb-1">Auto-Sync Enabled:</p>
-                                                <ul class="list-disc list-inside space-y-0.5">
-                                                    <li><strong>Admin web</strong> akan otomatis jadi <strong>admin bot</strong></li>
-                                                    <li><strong>Moderator web</strong> akan otomatis jadi <strong>moderator bot</strong></li>
-                                                </ul>
-                                                <p class="mt-2 text-gray-600">Kosongkan jika user tidak memiliki akun Telegram atau belum terdaftar di bot.</p>
-                                            </div>
-                                        </div>
+                                        <p class="mt-2 text-xs text-gray-500">Opsional. Isi jika user terhubung Telegram.</p>
                                     </div>
 
                                     <!-- Show linked telegram info when editing -->
@@ -223,16 +191,8 @@
                             <div class="rounded-2xl border border-gray-200 bg-white shadow-sm">
                                 <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between px-4 py-3 border-b border-gray-100">
                                     <div>
-                                        <p class="text-xs font-semibold text-blue-600 uppercase tracking-widest">Langkah 3</p>
                                         <h4 class="text-base font-semibold text-gray-900">Keamanan & Hak Akses</h4>
-                                        <p class="text-xs text-gray-500">Atur kata sandi yang kuat dan tentukan role.</p>
                                     </div>
-                                    <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 text-xs font-semibold text-blue-700">
-                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c1.105 0 2-.672 2-1.5S13.105 8 12 8s-2 .672-2 1.5.895 1.5 2 1.5zM6 19v-2a4 4 0 014-4h4a4 4 0 014 4v2"></path>
-                                        </svg>
-                                        Rahasiakan kredensial
-                                    </span>
                                 </div>
                                 <div class="p-4 sm:p-5">
                                     <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -252,7 +212,6 @@
                                                 Show
                                             </button>
                                         </div>
-                                        <p class="mt-1 text-xs text-gray-500">Gunakan kombinasi huruf besar, angka, dan simbol.</p>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">Role <span class="text-red-500">*</span></label>
@@ -272,27 +231,6 @@
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                                             </svg>
                                         </div>
-                                        <p class="mt-1 text-xs text-gray-500">Role menentukan akses menu dan jenis notifikasi.</p>
-                                    </div>
-                                </div>
-                                <div class="mt-4 grid grid-cols-1 gap-3 text-xs text-gray-600 sm:grid-cols-3">
-                                    <div class="flex items-start gap-2 p-3 rounded-2xl bg-blue-50 border border-blue-100">
-                                        <svg class="w-4 h-4 text-blue-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
-                                        </svg>
-                                        <p><strong>Admin</strong> memiliki akses penuh ke pengaturan film, pembayaran, telegram users, dan semua fitur manajemen.</p>
-                                    </div>
-                                    <div class="flex items-start gap-2 p-3 rounded-2xl bg-purple-50 border border-purple-100">
-                                        <svg class="w-4 h-4 text-purple-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4"></path>
-                                        </svg>
-                                        <p><strong>Moderator</strong> dapat menambah film dan mengelola konten, tapi tidak bisa edit/hapus atau akses pengaturan sistem.</p>
-                                    </div>
-                                    <div class="flex items-start gap-2 p-3 rounded-2xl bg-gray-50 border border-gray-200">
-                                        <svg class="w-4 h-4 text-gray-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                                        </svg>
-                                        <p><strong>User</strong> memiliki akses terbatas, hanya bisa melihat dashboard dan data yang telah ditentukan.</p>
                                     </div>
                                 </div>
                             </div>
@@ -558,7 +496,7 @@ $(document).ready(function() {
         $('#modalTitle').text('Add User');
         $('#userForm')[0].reset();
         $('#userId').val('');
-        $('#telegram_user_id').val('');
+        $('#telegram_id').val('');
         $('#telegramInfo').addClass('hidden');
         $('#password').prop('required', true);
         $('#password').attr('type', 'password');
@@ -586,16 +524,16 @@ $(document).ready(function() {
                 $('#email').val(data.email);
                 $('#phone').val(data.phone || '');
                 $('#role').val(data.role);
-                $('#telegram_user_id').val(data.telegram_user_id || '');
+                $('#telegram_id').val(data.telegram_id || '');
                 $('#password').val('');
                 $('#password').attr('type', 'password');
                 $('#togglePassword').text('Show');
 
                 // Show telegram info if linked
-                if (data.telegram_user_id) {
-                    $('#currentTelegramUserId').text(data.telegram_user_id);
-                    $('#currentTelegramUsername').text(data.telegram_username || '-');
-                    $('#currentTelegramRole').text(data.telegram_role || 'user');
+                if (data.telegram_id) {
+                    $('#currentTelegramUserId').text(data.telegram_id);
+                    $('#currentTelegramUsername').text(data.username || '-');
+                    $('#currentTelegramRole').text(data.role || 'user');
                     $('#telegramInfo').removeClass('hidden');
                 } else {
                     $('#telegramInfo').addClass('hidden');
@@ -653,10 +591,10 @@ $(document).ready(function() {
             role: $('#role').val()
         };
 
-        // Add telegram_user_id if provided
-        const telegramUserId = $('#telegram_user_id').val();
+        // Add telegram_id if provided
+        const telegramUserId = $('#telegram_id').val();
         if (telegramUserId) {
-            formData.telegram_user_id = telegramUserId;
+            formData.telegram_id = telegramUserId;
         }
 
         const password = $('#password').val();

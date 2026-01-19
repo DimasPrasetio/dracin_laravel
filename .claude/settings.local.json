@@ -12,7 +12,9 @@
       "Bash(ls:*)",
       "Bash(grep:*)",
       "Bash(curl:*)",
-      "Bash(php:*)"
+      "Bash(php:*)",
+      "Bash(python3:*)",
+      "Bash(find:*)"
     ]
   }
 }

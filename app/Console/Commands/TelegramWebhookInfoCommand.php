@@ -12,19 +12,19 @@ class TelegramWebhookInfoCommand extends Command
 
     public function handle()
     {
-        $this->info('🔍 Fetching webhook info...');
+        $this->info(' Fetching webhook info...');
         $this->newLine();
 
         try {
             $webhookInfo = Telegram::getWebhookInfo();
 
             if (empty($webhookInfo->url)) {
-                $this->warn('⚠️  No webhook is set (Polling mode)');
+                $this->warn('  No webhook is set (Polling mode)');
                 $this->newLine();
                 $this->info('To set webhook:');
                 $this->line('   php artisan telegram:webhook:set https://yourdomain.com/api/telegram/webhook');
             } else {
-                $this->info('✅ Webhook is active');
+                $this->info(' Webhook is active');
                 $this->newLine();
 
                 $this->line('<fg=cyan>URL:</>           ' . $webhookInfo->url);
@@ -37,19 +37,19 @@ class TelegramWebhookInfoCommand extends Command
 
                 if (isset($webhookInfo->last_error_date) && $webhookInfo->last_error_date > 0) {
                     $this->newLine();
-                    $this->warn('⚠️  Last Error:');
+                    $this->warn('  Last Error:');
                     $this->line('   Date: ' . date('Y-m-d H:i:s', $webhookInfo->last_error_date));
                     if (isset($webhookInfo->last_error_message)) {
                         $this->line('   Message: ' . $webhookInfo->last_error_message);
                     }
                 } else {
                     $this->newLine();
-                    $this->info('✅ No errors reported');
+                    $this->info(' No errors reported');
                 }
 
                 if (isset($webhookInfo->last_synchronization_error_date) && $webhookInfo->last_synchronization_error_date > 0) {
                     $this->newLine();
-                    $this->warn('⚠️  Last Sync Error:');
+                    $this->warn('  Last Sync Error:');
                     $this->line('   Date: ' . date('Y-m-d H:i:s', $webhookInfo->last_synchronization_error_date));
                 }
 
@@ -68,8 +68,9 @@ class TelegramWebhookInfoCommand extends Command
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('❌ Error: ' . $e->getMessage());
+            $this->error(' Error: ' . $e->getMessage());
             return Command::FAILURE;
         }
     }
 }
+

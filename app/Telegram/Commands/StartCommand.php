@@ -3,13 +3,17 @@
 namespace App\Telegram\Commands;
 
 use Telegram\Bot\Commands\Command;
-use App\Models\TelegramUser;
+use App\Models\Category;
+use App\Models\User;
 use App\Models\VideoPart;
 use App\Models\ViewLog;
 use App\Services\TelegramService;
+use App\Telegram\Commands\Traits\CategoryAware;
 
 class StartCommand extends Command
 {
+    use CategoryAware;
+
     protected string $name = 'start';
     protected string $description = 'Start command';
 
@@ -21,7 +25,7 @@ class StartCommand extends Command
         $text = $update->getMessage()->text;
 
         // Find or create user
-        $user = TelegramUser::findOrCreateFromTelegram($telegramUser);
+        $user = User::findOrCreateFromTelegram($telegramUser);
 
         // Check if deep link parameter exists
         if (preg_match('/^\/start\s+(.+)$/', $text, $matches)) {
@@ -32,42 +36,71 @@ class StartCommand extends Command
         }
     }
 
-    private function handleVideoRequest(TelegramUser $user, int $chatId, string $videoId)
+    private function handleVideoRequest(User $user, int $chatId, string $videoId)
     {
-        $videoPart = VideoPart::with('movie')->where('video_id', $videoId)->first();
+        $videoPart = VideoPart::with('movie.category')->where('video_id', $videoId)->first();
 
         if (!$videoPart) {
             $this->replyWithMessage([
-                'text' => '❌ Video tidak ditemukan.',
+                'text' => 'Video tidak ditemukan.',
             ]);
             return;
         }
 
-        // Check VIP access
-        if ($videoPart->is_vip && !$user->isVip()) {
-            $vipUntil = $user->vip_until ? $user->vip_until->format('d M Y H:i') : 'Tidak aktif';
+        // Determine category from video's movie
+        $movieCategory = $videoPart->movie->category;
 
-            $this->replyWithMessage([
-                'text' => "⚠️ <b>Video ini memerlukan akses VIP</b>\n\n" .
-                    "📽️ Film: <b>{$videoPart->movie->title}</b>\n" .
-                    "📀 Part: {$videoPart->part_number}\n\n" .
-                    "Status VIP Anda: {$vipUntil}\n\n" .
-                    "Untuk mengakses video VIP, ketik /vip untuk info upgrade.",
-                'parse_mode' => 'HTML',
-            ]);
-            return;
+        // Check VIP access - per category if movie has category, otherwise global
+        $hasVipAccess = false;
+        $vipUntil = 'Tidak aktif';
+
+        if ($videoPart->is_vip) {
+            $vipCategory = $movieCategory ?? Category::getDefault();
+
+            if ($vipCategory) {
+                $hasVipAccess = $user->isVipForCategory($vipCategory->id);
+                if ($hasVipAccess) {
+                    $vipData = $user->vipSubscriptions()
+                        ->where('category_id', $vipCategory->id)
+                        ->where('vip_until', '>', now())
+                        ->first();
+                    $vipUntil = $vipData?->vip_until?->format('d M Y H:i') ?? 'N/A';
+                }
+            } else {
+                $vipUntil = 'N/A';
+                $hasVipAccess = false;
+            }
+
+            if (!$hasVipAccess) {
+                $categoryInfo = $movieCategory ? " untuk kategori {$movieCategory->name}" : "";
+                $message = "<b>Video ini memerlukan akses VIP{$categoryInfo}</b>\n\n";
+                $message .= "Film: <b>{$videoPart->movie->title}</b>\n";
+                $message .= "Part: {$videoPart->part_number}\n";
+                if ($movieCategory) {
+                    $message .= "Kategori: {$movieCategory->name}\n";
+                }
+                $message .= "\nStatus VIP Anda{$categoryInfo}: {$vipUntil}\n\n";
+                $message .= "Untuk mengakses video VIP, ketik /vip untuk info upgrade.";
+
+                $this->replyWithMessage([
+                    'text' => $message,
+                    'parse_mode' => 'HTML',
+                ]);
+                return;
+            }
         }
 
-        // Send video
-        $telegramService = app(TelegramService::class);
-        $caption = "📽️ <b>{$videoPart->movie->title}</b>\n📀 Part {$videoPart->part_number}";
+        // Send video using telegram service with category context
+        $telegramService = $this->getTelegramService();
+        $caption = "<b>{$videoPart->movie->title}</b>\nPart {$videoPart->part_number}";
 
         $telegramService->sendVideo($chatId, $videoPart->file_id, $caption);
 
-        // Log video view
+        // Log video view with category
         ViewLog::create([
-            'telegram_user_id' => $user->id,
+            'user_id' => $user->id,
             'video_part_id' => $videoPart->id,
+            'category_id' => $movieCategory?->id,
             'is_vip' => $videoPart->is_vip,
             'source' => 'bot',
             'device' => 'telegram',
@@ -75,22 +108,41 @@ class StartCommand extends Command
         ]);
     }
 
-    private function sendWelcomeMessage(int $chatId, TelegramUser $user)
+    private function sendWelcomeMessage(int $chatId, User $user)
     {
-        $vipStatus = $user->isVip()
-            ? "✅ VIP Aktif hingga " . $user->vip_until->format('d M Y H:i')
-            : "❌ Belum VIP";
+        $category = $this->getCategory() ?? Category::getDefault();
 
-        $message = "🎬 <b>Selamat datang di Dracin Bot!</b>\n\n";
+        if ($category) {
+            $isVip = $user->isVipForCategory($category->id);
+            if ($isVip) {
+                $vipExpiry = $user->getVipExpiryForCategory($category->id);
+                $expiryText = $vipExpiry?->format('d M Y H:i') ?? 'N/A';
+                $vipStatus = "VIP aktif ({$category->name}) hingga {$expiryText}";
+            } else {
+                $vipStatus = "Belum VIP untuk {$category->name}";
+            }
+
+            $botName = $category->name;
+            $channelInfo = $category->channel_id
+                ? "Join channel {$category->channel_id} untuk update film terbaru!"
+                : "Nikmati koleksi film {$category->name}!";
+        } else {
+            $vipStatus = "Belum VIP";
+            $botName = "Dracin Bot";
+            $channelInfo = "Join channel @dracin_hd untuk update film terbaru!";
+        }
+
+        $message = "<b>Selamat datang di {$botName}!</b>\n\n";
         $message .= "Status: {$vipStatus}\n\n";
-        $message .= "📋 <b>Commands:</b>\n";
+        $message .= "<b>Commands:</b>\n";
         $message .= "/vip - Info paket VIP\n";
         $message .= "/help - Bantuan\n\n";
-        $message .= "Join channel @dracin_hd untuk update film terbaru!";
+        $message .= $channelInfo;
 
         $this->replyWithMessage([
             'text' => $message,
             'parse_mode' => 'HTML',
         ]);
     }
-}
+
+

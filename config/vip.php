@@ -3,6 +3,17 @@
 return [
     /*
     |--------------------------------------------------------------------------
+    | Default Category
+    |--------------------------------------------------------------------------
+    |
+    | Used when no explicit category is provided (single-bot fallback).
+    |
+    */
+    'default_category_slug' => env('VIP_DEFAULT_CATEGORY_SLUG', 'dracin'),
+    'default_category_name' => env('VIP_DEFAULT_CATEGORY_NAME', 'Dracin'),
+
+    /*
+    |--------------------------------------------------------------------------
     | VIP Package Definitions
     |--------------------------------------------------------------------------
     |

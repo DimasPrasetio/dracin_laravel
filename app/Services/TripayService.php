@@ -13,6 +13,8 @@ use App\Support\PaymentStatusCache;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use App\Models\CategoryVipPackage;
+use Illuminate\Support\Facades\Schema;
 
 class TripayService
 {
@@ -20,6 +22,16 @@ class TripayService
     private const HEALTH_CHECK_CACHE_TTL = 60; // 60 seconds
     private const MAX_RETRIES = 2;
     private const INITIAL_RETRY_DELAY_MS = 500;
+    private static ?bool $hasCategoryVipPackages = null;
+
+    private function hasCategoryVipPackages(): bool
+    {
+        if (self::$hasCategoryVipPackages === null) {
+            self::$hasCategoryVipPackages = Schema::hasTable('category_vip_packages');
+        }
+
+        return self::$hasCategoryVipPackages;
+    }
 
     public function __construct(
         private readonly PaymentRepository $paymentRepository,
@@ -63,7 +75,7 @@ class TripayService
     {
         try {
             $this->validateConfiguration();
-            $packageData = $this->getPackageDetails($paymentData->package);
+            $packageData = $this->getPackageDetails($paymentData->package, $paymentData->categoryId);
 
             if (!$packageData) {
                 throw TripayException::invalidPackage($paymentData->package);
@@ -227,17 +239,70 @@ class TripayService
     /**
      * Get package details
      */
-    public function getPackageDetails(string $package): ?array
+    public function getPackageDetails(string $package, ?int $categoryId = null): ?array
     {
+        if ($categoryId && $this->hasCategoryVipPackages()) {
+            $record = CategoryVipPackage::active()
+                ->where('category_id', $categoryId)
+                ->where('code', $package)
+                ->first();
+
+            if ($record) {
+                return [
+                    'name' => $record->name,
+                    'duration' => $record->duration_days,
+                    'price' => $record->price,
+                    'description' => $record->description,
+                    'badge' => $record->badge,
+                    'code' => $record->code,
+                ];
+            }
+        }
+
         $packages = config('vip.packages', []);
-        return $packages[$package] ?? null;
+        $packageData = $packages[$package] ?? null;
+
+        if (!$packageData) {
+            return null;
+        }
+
+        return [
+            'name' => $packageData['name'] ?? $package,
+            'duration' => (int) ($packageData['duration'] ?? 0),
+            'price' => (int) ($packageData['price'] ?? 0),
+            'description' => $packageData['description'] ?? null,
+            'badge' => $packageData['badge'] ?? null,
+            'code' => $package,
+        ];
     }
 
     /**
      * Get all VIP packages
      */
-    public function getPackages(): array
+    public function getPackages(?int $categoryId = null): array
     {
+        if ($categoryId && $this->hasCategoryVipPackages()) {
+            $records = CategoryVipPackage::active()
+                ->where('category_id', $categoryId)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get();
+
+            if ($records->isNotEmpty()) {
+                return $records->mapWithKeys(function (CategoryVipPackage $package) {
+                    return [
+                        $package->code => [
+                            'name' => $package->name,
+                            'duration' => $package->duration_days,
+                            'price' => $package->price,
+                            'description' => $package->description,
+                            'badge' => $package->badge,
+                        ],
+                    ];
+                })->all();
+            }
+        }
+
         return config('vip.packages', []);
     }
 
@@ -336,15 +401,18 @@ class TripayService
      */
     private function buildPaymentPayload(PaymentData $paymentData, string $signature, int $expiresInSeconds): array
     {
-        $packageData = $this->getPackageDetails($paymentData->package);
+        $packageData = $this->getPackageDetails($paymentData->package, $paymentData->categoryId);
+        $user = $paymentData->user;
+        $telegramId = $user->telegram_id ?? $user->id;
+        $phoneSuffix = str_pad(substr((string) $telegramId, 0, 10), 10, '0', STR_PAD_LEFT);
 
         return [
             'method' => $paymentData->paymentMethod,
             'merchant_ref' => $paymentData->merchantRef,
             'amount' => $paymentData->amount,
-            'customer_name' => $paymentData->telegramUser->full_name ?: 'User ' . $paymentData->telegramUser->telegram_user_id,
-            'customer_email' => 'user' . $paymentData->telegramUser->telegram_user_id . '@dracinbot.com',
-            'customer_phone' => '08' . substr($paymentData->telegramUser->telegram_user_id, 0, 10),
+            'customer_name' => $user->display_name ?: 'User ' . $telegramId,
+            'customer_email' => 'user' . $telegramId . '@dracinbot.com',
+            'customer_phone' => '08' . $phoneSuffix,
             'order_items' => [
                 [
                     'name' => $packageData['name'],

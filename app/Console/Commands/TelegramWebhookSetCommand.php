@@ -17,7 +17,7 @@ class TelegramWebhookSetCommand extends Command
         $certificate = $this->option('certificate');
 
         if (!$url) {
-            $this->error('❌ Webhook URL not provided!');
+            $this->error(' Webhook URL not provided!');
             $this->info('Please provide URL as argument or set TELEGRAM_WEBHOOK_URL in .env');
             $this->newLine();
             $this->info('Example: php artisan telegram:webhook:set https://yourdomain.com/api/telegram/webhook');
@@ -26,18 +26,18 @@ class TelegramWebhookSetCommand extends Command
 
         // Validate URL
         if (!filter_var($url, FILTER_VALIDATE_URL)) {
-            $this->error('❌ Invalid URL format!');
+            $this->error(' Invalid URL format!');
             return Command::FAILURE;
         }
 
         // Check if URL is HTTPS
         if (!str_starts_with($url, 'https://')) {
-            $this->error('❌ Webhook URL must use HTTPS!');
+            $this->error(' Webhook URL must use HTTPS!');
             $this->info('Telegram webhooks require HTTPS connection.');
             return Command::FAILURE;
         }
 
-        $this->info('🔧 Setting webhook...');
+        $this->info(' Setting webhook...');
         $this->info('URL: ' . $url);
 
         try {
@@ -53,7 +53,7 @@ class TelegramWebhookSetCommand extends Command
 
             if ($certificate) {
                 if (!file_exists($certificate)) {
-                    $this->error('❌ Certificate file not found: ' . $certificate);
+                    $this->error(' Certificate file not found: ' . $certificate);
                     return Command::FAILURE;
                 }
                 $params['certificate'] = $certificate;
@@ -64,14 +64,14 @@ class TelegramWebhookSetCommand extends Command
 
             if ($response) {
                 $this->newLine();
-                $this->info('✅ Webhook set successfully!');
+                $this->info(' Webhook set successfully!');
                 $this->newLine();
 
                 // Get webhook info
                 $this->call('telegram:webhook:info');
 
                 $this->newLine();
-                $this->info('💡 Tips:');
+                $this->info(' Tips:');
                 $this->line('  - Test your webhook: Send a message to your bot');
                 $this->line('  - Check webhook status: php artisan telegram:webhook:info');
                 $this->line('  - View logs: tail -f storage/logs/laravel.log');
@@ -80,11 +80,11 @@ class TelegramWebhookSetCommand extends Command
 
                 return Command::SUCCESS;
             } else {
-                $this->error('❌ Failed to set webhook!');
+                $this->error(' Failed to set webhook!');
                 return Command::FAILURE;
             }
         } catch (\Exception $e) {
-            $this->error('❌ Error: ' . $e->getMessage());
+            $this->error(' Error: ' . $e->getMessage());
             Log::error('Failed to set webhook', [
                 'error' => $e->getMessage(),
                 'url' => $url
@@ -93,3 +93,4 @@ class TelegramWebhookSetCommand extends Command
         }
     }
 }
+

@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
         // Important: TelegramAdminSeeder must run first
         // so telegram users exist before linking in UserSeeder
         $this->call([
+            CategorySeeder::class,
             TelegramAdminSeeder::class,
             UserSeeder::class,
         ]);

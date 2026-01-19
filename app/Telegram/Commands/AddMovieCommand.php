@@ -5,9 +5,12 @@ namespace App\Telegram\Commands;
 use Telegram\Bot\Commands\Command;
 use App\Models\BotState;
 use App\Services\TelegramAuthService;
+use App\Telegram\Commands\Traits\CategoryAware;
 
 class AddMovieCommand extends Command
 {
+    use CategoryAware;
+
     protected string $name = 'addmovie';
     protected string $description = 'Tambah film baru (Admin & Moderator)';
 
@@ -16,10 +19,19 @@ class AddMovieCommand extends Command
         $update = $this->getUpdate();
         $telegramUser = $update->getMessage()->from;
         $message = $update->getMessage();
+        $category = $this->getCategory();
 
         // Check if user can add movies (admin or moderator)
+        // For category-specific bots, also check category admin
         $authService = app(TelegramAuthService::class);
-        if (!$authService->canAddMovies($telegramUser->id)) {
+        $canAddMovies = $authService->canAddMovies($telegramUser->id);
+
+        // If category is set, also check if user is admin for this category
+        if ($category && !$canAddMovies) {
+            $canAddMovies = $authService->canAddMoviesForCategory($telegramUser->id, $category->id);
+        }
+
+        if (!$canAddMovies) {
             $this->replyWithMessage([
                 'text' => "\u{274C} Command ini hanya untuk admin dan moderator.",
             ]);
@@ -27,22 +39,22 @@ class AddMovieCommand extends Command
         }
 
         // Set bot state and track command message ID
-        BotState::setState($telegramUser->id, 'AWAITING_THUMBNAIL', [
-            'step' => 'thumbnail',
-            'message_ids' => [$message->message_id], // Track command message
-        ]);
-
+        // Include category_id in state for later use when creating movie
+        $categoryInfo = $category ? " untuk {$category->name}" : "";
         $response = $this->replyWithMessage([
-            'text' => "\u{1F3AC} <b>Tambah Film Baru</b>\n\n\u{1F4F8} Silakan masukkan thumbnail film (foto)",
+            'text' => "\u{1F3AC} <b>Tambah Film Baru{$categoryInfo}</b>\n\n\u{1F4F8} Silakan masukkan thumbnail film (foto)",
             'parse_mode' => 'HTML',
         ]);
 
-        // Track bot response message ID
+        $messageIds = [$message->message_id];
         if (isset($response->message_id)) {
-            $state = BotState::getState($telegramUser->id);
-            $data = $state->data ?? [];
-            $data['message_ids'][] = $response->message_id;
-            BotState::setState($telegramUser->id, 'AWAITING_THUMBNAIL', $data);
+            $messageIds[] = $response->message_id;
         }
+
+        BotState::setState($telegramUser->id, 'AWAITING_THUMBNAIL', [
+            'step' => 'thumbnail',
+            'category_id' => $category?->id,
+            'message_ids' => $messageIds,
+        ]);
     }
 }

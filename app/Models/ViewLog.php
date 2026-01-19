@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ViewLog extends Model
 {
@@ -12,8 +13,9 @@ class ViewLog extends Model
     protected $table = 'view_logs';
 
     protected $fillable = [
-        'telegram_user_id',
+        'user_id',
         'video_part_id',
+        'category_id',
         'is_vip',
         'source',
         'device',
@@ -24,13 +26,67 @@ class ViewLog extends Model
         'is_vip' => 'boolean',
     ];
 
-    public function videoPart()
+    // ==========================================
+    // RELATIONSHIPS
+    // ==========================================
+
+    /**
+     * User who viewed the content
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Video part that was viewed
+     */
+    public function videoPart(): BelongsTo
     {
         return $this->belongsTo(VideoPart::class);
     }
 
-    public function telegramUser()
+    /**
+     * Category of the viewed content
+     */
+    public function category(): BelongsTo
     {
-        return $this->belongsTo(TelegramUser::class);
+        return $this->belongsTo(Category::class);
+    }
+
+    // ==========================================
+    // SCOPES
+    // ==========================================
+
+    /**
+     * Scope: VIP views only
+     */
+    public function scopeVipViews($query)
+    {
+        return $query->where('is_vip', true);
+    }
+
+    /**
+     * Scope: Free views only
+     */
+    public function scopeFreeViews($query)
+    {
+        return $query->where('is_vip', false);
+    }
+
+    /**
+     * Scope: By category
+     */
+    public function scopeForCategory($query, int $categoryId)
+    {
+        return $query->where('category_id', $categoryId);
+    }
+
+    /**
+     * Scope: By user
+     */
+    public function scopeForUser($query, int $userId)
+    {
+        return $query->where('user_id', $userId);
     }
 }

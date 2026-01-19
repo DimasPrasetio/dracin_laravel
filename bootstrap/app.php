@@ -15,11 +15,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminMiddleware::class,
             'admin.only' => \App\Http\Middleware\AdminOnlyMiddleware::class,
+            'category.access' => \App\Http\Middleware\CategoryAccessMiddleware::class,
+            'category.admin' => \App\Http\Middleware\CategoryAdminMiddleware::class,
         ]);
 
         // Exclude Tripay callback from CSRF verification
         $middleware->validateCsrfTokens(except: [
             '/payment/callback',
+            '/api/telegram/webhook/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
