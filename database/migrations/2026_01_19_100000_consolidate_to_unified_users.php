@@ -45,10 +45,8 @@ return new class extends Migration
     public function up(): void
     {
         $this->info('Starting user consolidation migration...');
-
-        DB::beginTransaction();
-
         try {
+            // NOTE: MySQL auto-commits DDL; avoid wrapping in a single transaction.
             // Step 1: Prepare users table with telegram fields
             $this->prepareUsersTable();
 
@@ -70,12 +68,9 @@ return new class extends Migration
             // Step 7: Clean up
             $this->cleanup();
 
-            DB::commit();
-
             $this->info('User consolidation migration completed successfully!');
 
         } catch (\Exception $e) {
-            DB::rollBack();
             Log::error('User consolidation migration failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
