@@ -144,5 +144,5 @@ class StartCommand extends Command
             'parse_mode' => 'HTML',
         ]);
     }
-
+}
 
