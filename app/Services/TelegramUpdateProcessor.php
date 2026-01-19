@@ -383,12 +383,12 @@ class TelegramUpdateProcessor
         }
 
         // Use appropriate bot for sending photo
+        // Note: QR payment images should NOT be protected so users can save/screenshot for payment
         $this->getBot()->sendPhoto([
             'chat_id' => $chatId,
             'photo' => InputFile::create($filePath),
             'caption' => $caption,
             'parse_mode' => 'HTML',
-            'protect_content' => true,
         ]);
 
         // File will be cleaned up by scheduled task (storage:cleanup-temp)
