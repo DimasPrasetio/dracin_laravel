@@ -1,3 +1,11 @@
+# Prasyarat (sekali)
+# 1. Aktifkan PHP extension ZIP di php.ini
+#    extension=zip
+# 2. Install paket backup
+#    composer require spatie/laravel-backup
+# 3. Publish config
+#    php artisan vendor:publish --provider="Spatie\Backup\BackupServiceProvider"
+
 # 1. Backup database terlebih dahulu
 php artisan backup:run --only-db
 

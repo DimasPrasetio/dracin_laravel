@@ -369,8 +369,29 @@ return new class extends Migration
 
     private function handleCategoryAdminsTable(): void
     {
-        // For category_admins, merge telegram_user_id into user_id
-        // where user_id is null
+        // Resolve overlaps before merging to avoid unique constraint violations.
+        // If both web admin and bot admin exist for the same category/user,
+        // keep the web admin row and elevate role to admin if needed.
+        DB::statement("
+            UPDATE category_admins c
+            INNER JOIN category_admins b
+                ON c.category_id = b.category_id
+               AND c.user_id = b.telegram_user_id
+            SET c.role = 'admin'
+            WHERE c.role = 'moderator'
+              AND b.role = 'admin'
+        ");
+
+        DB::statement("
+            DELETE b FROM category_admins b
+            INNER JOIN category_admins c
+                ON c.category_id = b.category_id
+               AND c.user_id = b.telegram_user_id
+            WHERE b.user_id IS NULL
+              AND b.telegram_user_id IS NOT NULL
+        ");
+
+        // Merge remaining bot admins into user_id where user_id is null.
         DB::table('category_admins')
             ->whereNull('user_id')
             ->whereNotNull('telegram_user_id')
