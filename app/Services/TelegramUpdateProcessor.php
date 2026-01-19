@@ -76,6 +76,12 @@ class TelegramUpdateProcessor
         if ($this->category && $this->category->bot_token) {
             if (!$this->bot) {
                 $this->bot = new Api($this->category->bot_token);
+
+                // Register commands to this bot instance
+                $commands = config('telegram.bots.default.commands', []);
+                foreach ($commands as $commandClass) {
+                    $this->bot->addCommand($commandClass);
+                }
             }
             return $this->bot;
         }
